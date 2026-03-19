@@ -382,6 +382,8 @@ class CodeQLDBLookup:
         """
         src_zip = Path(db_path) / "src.zip"
         file_path = current_function["file"].replace("\"", "")[1:]
+        file_path = file_path.replace(":","D_")  # Normalize path separators - fixed to match actual ZIP structure
+        #logger.debug(f"@@@4Extracting function lines: file_path='{file_path}', start_line={current_function['start_line']}, end_line={current_function['end_line']}")
         code_file = read_file_lines_from_zip(str(src_zip), file_path)
         lines = code_file.split("\n")
 

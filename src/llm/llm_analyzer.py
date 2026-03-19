@@ -3,12 +3,14 @@
 Orchestrates a conversation with a language model, requesting additional snippets
 of code via "tools" if needed. Uses either OpenAI or AzureOpenAI (or placeholder
 code for a HuggingFace endpoint) to handle queries.
-
+w
 All logic is now wrapped in the `LLMAnalyzer` class for improved organization.
 """
 
+from datetime import datetime  # noqa: F401 - kept for potential future use
 import os
 import json
+import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import litellm
@@ -28,6 +30,27 @@ class LLMAnalyzer:
     with system instructions, and ultimately produce a status code.
     """
 
+    def dump_messages_for_audit(self, messages: Optional[list] = None, file_path: Optional[str] = None) -> None:
+        """
+        Dump the current messages list to a human-readable, pretty-printed JSON format for auditing purposes.
+
+        Args:
+            messages (list, optional): The messages list to dump. If None, tries to use self.messages or raises ValueError.
+            file_path (str, optional): If provided, writes the output to the specified file. Otherwise, prints to stdout.
+        """
+        if messages is None:
+            # Try to use self.messages if available, else raise error
+            if hasattr(self, 'messages'):
+                messages = getattr(self, 'messages')
+            else:
+                raise ValueError("No messages list provided and no 'messages' attribute found.")
+        formatted = json.dumps(messages, indent=2, ensure_ascii=False)
+        if file_path:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(formatted)
+        else:
+            print(formatted, file=sys.stdout)
+
     def __init__(self) -> None:
         """
         Initialize the LLMAnalyzer instance and define tools and system messages.
@@ -36,13 +59,32 @@ class LLMAnalyzer:
         self.model: Optional[str] = None
         self.db_lookup = CodeQLDBLookup()
 
+        # Token usage tracking (accumulated across findings)
+        self._token_sums: Dict[str, int] = {
+            'prompt': 0,
+            'completion': 0,
+            'total': 0,
+            'findings': 0
+        }
+        # Per-finding token tracking (reset each finding)
+        self._current_finding_tokens: Dict[str, int] = {
+            'prompt': 0,
+            'completion': 0,
+            'total': 0,
+            'cost': 0.0
+        }
+
         # Tools configuration: A set of function calls the LLM can invoke
         self.tools: List[Dict[str, Any]] = [
             {
                 "type": "function",
                 "function": {
                     "name": "get_function_code",
-                    "description": "Retrieves the code for a missing function code.",
+                    "description": (
+                        "Retrieves function implementation (source code) anywhere in the program. "
+                        "Focus on edge cases, error conditions, and return values that might affect security. "
+                        "Pay special attention to what functions return when inputs are invalid or edge cases occur."
+                    ),
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -84,6 +126,7 @@ class LLMAnalyzer:
                     "name": "get_class",
                     "description": (
                         "Retrieves class / struct / union implementation (anywhere in code). "
+                        "Pay attention to member variables, access controls, and potential security implications. "
                         "If you need a specific method from that class, use get_function_code instead."
                     ),
                     "parameters": {
@@ -147,6 +190,12 @@ class LLMAnalyzer:
                 "content": (
                     "You are an expert security researcher.\n"
                     "Your task is to verify if the issue that was found has a real security impact.\n"
+                    "CRITICAL: Analyze ONLY the specific reported issue. Do NOT analyze or comment on other potential issues you may notice in the code.\n"
+                    "Focus exclusively on validating the exact vulnerability that was flagged by the static analysis.\n"
+                    "EVIDENCE-BASED ANALYSIS: When the static analyzer reports a specific vulnerability, treat this as EVIDENCE to investigate, not dismiss. If your analysis concludes 'secure' but the analyzer found an issue, you must identify the discrepancy before concluding.\n"
+                    "ASSUMPTION VALIDATION: Before concluding code is secure, verify that critical assumptions are true. If your reasoning relies on external functions, library behavior, or system properties, investigate those dependencies.\n"
+                    "If relying on guards/checks for security, verify they prevent the specific reported condition.\n"
+                    "CRITICAL: Do NOT rely on assertions (assert, core_assert, etc.) as security controls - they're disabled in release builds.\n"
                     "Return a concise status code based on the guidelines provided.\n"
                     "Use the tools function when you need code from other parts of the program.\n"
                     "You *MUST* follow the guidelines!"
@@ -160,7 +209,11 @@ class LLMAnalyzer:
                     "1. Briefly explain the code.\n"
                     "2. Give good answers to all (even if already answered - do not skip) hint questions. "
                     "(Copy the question word for word, then provide the answer.)\n"
-                    "3. Do you have all the code needed to answer the questions? If no, use the tools!\n"
+                    "3. Do you have all the code needed to answer the questions?\n"
+                    "   - If the static analyzer's finding contradicts your reasoning, investigate why\n"
+                    "   - If your security conclusion depends on an assertion (assert, core_assert, etc.) as a guard, STOP — "
+                    "assertions are disabled in release builds and are NOT valid protection. Re-evaluate your conclusion without them.\n"
+                    "   - If no, use the tools!\n"
                     "4. Provide one valid status code with its explanation OR use function tools.\n"
                 )
             },
@@ -175,8 +228,29 @@ class LLMAnalyzer:
                     "- **7331**: Indicates more code is needed to validate security. Write what data you need "
                     "and explain why you can't use the tools to retrieve the missing data, plus add **3713** "
                     "if you're pretty sure it's not a security problem.\n"
+                    "- **7337**: Conflicting evidence - need to resolve discrepancy between analysis and static analyzer finding.\n"
+                    "  Must include directional confidence: 7337-LEAN-VULN (if evidence points toward vulnerability) or 7337-LEAN-SECURE (if evidence suggests false positive).\n"
                     "Only one status should be returned!\n"
                     "You will get 10000000000$ if you follow all the instructions and use the tools correctly!"
+                )
+            },
+            {
+                "role": "system",
+                "content": (
+                    "### Tool Usage Rules\n"
+                    "BEFORE making any tool call, you MUST check the conversation above for a prior call with "
+                    "the EXACT same tool name and EXACT same arguments (character-for-character identical). "
+                    "If you find an exact match, use that response — a new request will "
+                    "not return different information. This applies even after you receive system messages.\n\n"
+                    "WORKFLOW for every tool call:\n"
+                    "1. Decide what tool and arguments you need.\n"
+                    "2. Search this conversation for a previous call with that exact tool and arguments.\n"
+                    "3. If found: STOP. Use the existing response. Do NOT submit the call.\n"
+                    "4. If not found: Submit the call.\n\n"
+                    "Additional rules:\n"
+                    "- If get_macro returns 'not found', the symbol is likely an inline constexpr — use get_global_var instead.\n"
+                    "- If get_class returns a different class name than you requested, that is the closest match available. "
+                    "Do NOT retry — you will get the same result. Try get_global_var for the typedef, or work with what you have."
                 )
             },
         ]
@@ -407,9 +481,11 @@ class LLMAnalyzer:
             top_p (float, optional): Nucleus sampling. Defaults to 0.2.
 
         Returns:
-            Tuple[List[Dict[str, Any]], str]:
+            Tuple[List[Dict[str, Any]], str, Dict[str, Any]]:
                 - The final conversation messages,
-                - The final content from the LLM's last message.
+                - The final content from the LLM's last message,
+                - Per-finding stats dict with keys: rounds, tool_calls, prompt_tokens,
+                  completion_tokens, total_tokens, estimated_cost_usd, duration_seconds, model.
         
         Raises:
             RuntimeError: If LLM model not initialized.
@@ -425,15 +501,23 @@ class LLMAnalyzer:
 
         messages: List[Dict[str, Any]] = self.MESSAGES[:]
         messages.append({"role": "user", "content": prompt})
+        logger.info(f"LLM prompt sent at start: {prompt[:200]}" if len(prompt) > 200 else f"LLM prompt sent at start: {prompt}")
 
         amount_of_tools = 0
         final_content = ""
-
+        round_count = 0
+        # Reset per-finding token counters
+        self._current_finding_tokens = {'prompt': 0, 'completion': 0, 'total': 0, 'cost': 0.0}
+        import time as _time
+        _finding_start_time = _time.time()
         while not got_answer:
+            round_count += 1    
             # Send the current messages + tools to the LLM endpoint
+            logger.info("=" * 80)
+            logger.info(f"Round {round_count} started with {len(messages)} messages.")
             try:
-                # Build completion kwargs - Bedrock Claude doesn't allow both temperature and top_p
-                completion_kwargs = {
+                # Build completion parameters
+                completion_params = {
                     "model": self.model,
                     "messages": messages,
                     "tools": self.tools,
@@ -446,14 +530,41 @@ class LLMAnalyzer:
                     (self.model.startswith("bedrock/") or "arn:aws:bedrock" in self.model)
                 )
                 
-                if is_bedrock:
-                    # Bedrock Claude only accepts temperature OR top_p, not both
-                    completion_kwargs["temperature"] = temperature
-                else:
-                    completion_kwargs["temperature"] = temperature
-                    completion_kwargs["top_p"] = top_p
+                # Add sampling parameters based on model compatibility
+                # gpt-5.1-codex doesn't support temperature or top_p
+                if "gpt-5.1-codex" not in self.model:
+                    if is_bedrock:
+                        # Bedrock Claude only accepts temperature OR top_p, not both
+                        completion_params["temperature"] = temperature
+                    else:
+                        completion_params["temperature"] = temperature
+                        completion_params["top_p"] = top_p
                 
-                response = litellm.completion(**completion_kwargs)
+                response = litellm.completion(**completion_params)
+                # --- BEGIN TOKEN TRACKING ---
+                usage_info = getattr(response, "usage", None)
+                if usage_info:
+                    prompt_tokens = usage_info.get('prompt_tokens', 0)
+                    completion_tokens = usage_info.get('completion_tokens', 0)
+                    total_tokens = usage_info.get('total_tokens', 0)
+                    logger.info(f"LLM token usage: prompt={prompt_tokens}, completion={completion_tokens}, total={total_tokens}")
+                    # Per-finding accumulation
+                    self._current_finding_tokens['prompt'] += prompt_tokens
+                    self._current_finding_tokens['completion'] += completion_tokens
+                    self._current_finding_tokens['total'] += total_tokens
+                    # Global accumulation
+                    self._token_sums['prompt'] += prompt_tokens
+                    self._token_sums['completion'] += completion_tokens
+                    self._token_sums['total'] += total_tokens
+                else:
+                    logger.info("LLM token usage: not available in response.")
+                # --- Per-round cost tracking via litellm ---
+                try:
+                    round_cost = litellm.completion_cost(completion_response=response)
+                    self._current_finding_tokens['cost'] += round_cost
+                except Exception:
+                    pass  # Cost calculation not available for all models
+                # --- END TOKEN TRACKING ---
             except litellm.RateLimitError as e:
                 raise LLMApiError(f"Rate limit exceeded for LLM API: {e}") from e
             except litellm.Timeout as e:
@@ -470,24 +581,29 @@ class LLMAnalyzer:
                 raise LLMApiError(f"LLM API response is empty: {response}")
 
             content_obj = response.choices[0].message
+            #logger.info(f"LLM reply at {datetime.datetime.now().isoformat()}: {content_obj.content[:200]}" if content_obj.content and len(content_obj.content) > 200 else f"LLM reply at {datetime.datetime.now().isoformat()}: {content_obj.content}")
             messages.append({
                 "role": content_obj.role,
                 "content": content_obj.content,
                 "tool_calls": content_obj.tool_calls
             })
+            #logger.info(f"Message appended at {datetime.datetime.now().isoformat()} for role {content_obj.role}.")
 
             final_content = content_obj.content or ""
             tool_calls = content_obj.tool_calls
+            logger.info("-" * 80)
 
             if not tool_calls:
                 # Check if we have a recognized status code
-                if final_content and any(code in final_content for code in ["1337", "1007", "7331", "3713"]):
+                if final_content and any(code in final_content for code in ["1337", "1007", "7331", "7337", "7337-LEAN-VULN", "7337-LEAN-SECURE", "3713"]):
                     got_answer = True
+                    logger.info(f"got_answer. Ending analysis.")
                 else:
                     messages.append({
                         "role": "system",
                         "content": "Please follow all the instructions!"
                     })
+                    logger.info("!!!llm said final_content but wrong code.  Try again enforcing instructions.")
             else:
                 amount_of_tools += 1
                 arg_messages: List[Dict[str, Any]] = []
@@ -496,6 +612,8 @@ class LLMAnalyzer:
                     tool_call_id = tc.id
                     tool_function_name = tc.function.name
                     tool_args = tc.function.arguments
+
+                    logger.info(f"LLM Requested Tool call {tool_function_name} with args {tool_args}")
 
                     # Convert tool_args to a dict if it's a JSON string
                     if not isinstance(tool_args, dict):
@@ -561,9 +679,22 @@ class LLMAnalyzer:
                             response_msg = global_var
 
                     elif tool_function_name == 'get_class' and "object_name" in tool_args:
-                        curr_class = self.db_lookup.get_class(db_path_clean, tool_args["object_name"])
+                        requested_name = tool_args["object_name"]
+                        curr_class = self.db_lookup.get_class(db_path_clean, requested_name)
                         if isinstance(curr_class, dict):
                             class_code = self.extract_function_from_file(db_path_clean, curr_class)
+                            # Check if this was a fuzzy match (returned class != requested class)
+                            actual_name = curr_class.get("class_name", "").replace('"', '').split("::")[-1]
+                            requested_simple = requested_name.split("::")[-1]
+                            if actual_name != requested_simple:
+                                class_code += (
+                                    f"\n\n[NOTE: Exact match for '{requested_name}' was not found. "
+                                    f"The above is the closest match ('{actual_name}'). "
+                                    f"'{requested_name}' may be a typedef or template alias. "
+                                    f"Do NOT retry get_class with the same name — the result will be identical. "
+                                    f"Instead, try get_global_var to find the typedef definition, "
+                                    f"or work with the information you already have.]"
+                                )
                             response_msg = class_code
                         else:
                             response_msg = curr_class
@@ -573,6 +704,9 @@ class LLMAnalyzer:
                             f"No matching tool '{tool_function_name}' or invalid args {tool_args}. "
                             "Try again."
                         )
+                        logger.info(f"!!!Invalid tool call: {tool_function_name} with args {tool_args}, tell llm to try again")
+
+                    #logger.info(f"Tool result at {datetime.datetime.now().isoformat()}: {response_msg[:200]}" if response_msg and len(response_msg) > 200 else f"Tool result at {datetime.datetime.now().isoformat()}: {response_msg}")
 
                     messages.append({
                         "role": "tool",
@@ -580,10 +714,10 @@ class LLMAnalyzer:
                         "name": tool_function_name,
                         "content": response_msg
                     })
-
+                    logger.info("."*80)
                 messages += arg_messages
 
-                if amount_of_tools >= 6:
+                if amount_of_tools >= 10:
                     messages.append({
                         "role": "system",
                         "content": (
@@ -591,5 +725,40 @@ class LLMAnalyzer:
                             "return the 'more data' status."
                         )
                     })
+                    logger.info("!!Tool-call limit (10) reached. Enforcing final answer or 'more data' status.")
 
-        return messages, final_content
+        #logger.info(f"LLM analysis concluded at {datetime.datetime.now().isoformat()}. Final reply: {final_content[:200]}" if final_content and len(final_content) > 200 else f"LLM analysis concluded at {datetime.datetime.now().isoformat()}. Final reply: {final_content}")
+        logger.info(f"LLM analysis concluded. Reason for ending: {'Status code found' if got_answer else 'Tool-call limit reached'}")
+
+        # Calculate duration
+        _finding_duration = _time.time() - _finding_start_time
+
+        # --- REPORT TOTALS AND AVERAGES ---
+        self._token_sums['findings'] += 1
+        total_prompt = self._token_sums['prompt']
+        total_completion = self._token_sums['completion']
+        total_all = self._token_sums['total']
+        findings = self._token_sums['findings']
+        avg_prompt = total_prompt // findings if findings else 0
+        avg_completion = total_completion // findings if findings else 0
+        avg_total = total_all // findings if findings else 0
+        logger.info(f"LLM token usage totals: prompt={total_prompt}, completion={total_completion}, total={total_all}, findings={findings}")
+        logger.info(f"LLM token usage averages per finding: prompt={avg_prompt}, completion={avg_completion}, total={avg_total}")
+
+        # Build per-finding stats dict
+        finding_stats: Dict[str, Any] = {
+            'rounds': round_count,
+            'tool_calls': amount_of_tools,
+            'prompt_tokens': self._current_finding_tokens['prompt'],
+            'completion_tokens': self._current_finding_tokens['completion'],
+            'total_tokens': self._current_finding_tokens['total'],
+            'estimated_cost_usd': round(self._current_finding_tokens['cost'], 6),
+            'duration_seconds': round(_finding_duration, 2),
+            'model': self.model,
+        }
+        logger.info(f"Finding stats: rounds={round_count}, tool_calls={amount_of_tools}, "
+                    f"tokens={self._current_finding_tokens['total']}, "
+                    f"cost=${self._current_finding_tokens['cost']:.4f}, "
+                    f"duration={_finding_duration:.1f}s")
+
+        return messages, final_content, finding_stats

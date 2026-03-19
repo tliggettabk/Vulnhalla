@@ -14,13 +14,15 @@ Analysis Pipeline Algorithm:
     3. Extract snippet and full function code.
     4. Replace bracket references in the message; if references point outside current function, append those functions' code.
     5. Build prompt; save *_raw.json; run LLM analysis; save *_final.json.
-    6. Classify by substring: "1337" → true, "1007" → false, else → more; log stats.
+    6. Classify by substring: "1337"/"7337-LEAN-VULN" → true, "1007"/"7337-LEAN-SECURE" → false, "7331"/"7337" → more, else → more; log stats.
 """
 
 from pathlib import Path, PurePosixPath
 import csv
 import re
 import json
+import time
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from src.utils.common_functions import (
     get_all_dbs,
@@ -56,6 +58,7 @@ class IssueAnalyzer:
         self.lang = lang
         self.db_path: Optional[str] = None
         self.code_path: Optional[str] = None
+        self.code_path_in_csv_row: Optional[str] = None
         self.config = config
 
     # ----------------------------------------------------------------------
@@ -102,6 +105,7 @@ class IssueAnalyzer:
 
         Args:
             dbs_folder (str): The folder containing the language-specific databases.
+                              or a folder that is the database itself.
 
         Returns:
             Dict[str, List[Dict[str, str]]]: All issues, grouped by issue name.
@@ -158,29 +162,36 @@ class IssueAnalyzer:
         keys = ["function_name", "file", "start_line", "function_id", "end_line", "caller_id"]
         best_function = None
         smallest_range = float('inf')
-
+        logger.debug(f"Searching for function in {function_tree_file} for {file_path}:{line}")
         try:
             with Path(function_tree_file).open("r", encoding="utf-8") as f:
                 for row in f:
+                    #file_path /C_/Users/tliggett/source/repos/CPlusPlusSmall/simpletest.cpp
+                    #row C:/msys64/ucrt64/include/c++/14.2.0/bits/uses_allocator.h
                     if file_path in row:
                         fields = re.split(r',(?=(?:[^"]*"[^"]*")*[^"]*$)', row.strip())
                         if len(fields) != len(keys):
+                            logger.debug(f"Malformed row in function tree: {row.strip()}")
                             continue  # Skip malformed rows
 
                         function = dict(zip(keys, fields))
                         try:
                             start_line = int(function["start_line"])
                             end_line = int(function["end_line"])
-                        except ValueError:
-                            continue  # Skip if lines aren't integers
 
+                        except ValueError:
+                            logger.debug(f"Invalid line numbers in function: {function['function_name']}")
+                            continue  # Skip if lines aren't integers
+                        logger.debug(f"Checking function {function['function_name']} ")
                         # Check if the target line falls within this function's range
                         if start_line <= line <= end_line:
                             if file_path in function["file"]:
                                 # Greedy selection: track the function with smallest range
                                 # (most specific/nested function containing the line)
                                 size = end_line - start_line
+                                logger.debug(f"Function {function['function_name']} matches with size {size}")
                                 if size < smallest_range:
+                                    logger.debug(f"...and is the new best match")
                                     best_function = function
                                     smallest_range = size
         except FileNotFoundError as e:
@@ -255,7 +266,7 @@ class IssueAnalyzer:
                 full_path = code_path + file_path
             else:
                 full_path = file_path[1:] if file_path.startswith("/") else file_path
-
+            logger.debug(f"@@@2Replacing bracket reference: variable={variable}, path_type={path_type}, file_path={file_path}, line={line_number}, offsets=({start_offset}, {end_offset})")
             code_text = read_file_lines_from_zip(
                 str(Path(db_path) / "src.zip"),
                 full_path
@@ -358,7 +369,8 @@ class IssueAnalyzer:
         function_tree_file: str,
         current_function: Dict[str, str],
         results_folder: str,
-        issue_id: int
+        issue_id: int,
+        llm_analyzer: Optional[Any] = None
     ) -> None:
         """
         Saves the raw input data (prompt, function tree info, etc.) to a JSON file before
@@ -370,17 +382,28 @@ class IssueAnalyzer:
             current_function (Dict[str, str]): The currently found function dict.
             results_folder (str): Folder path where we store the result files.
             issue_id (int): The numeric ID of the current issue.
+            llm_analyzer (LLMAnalyzer, optional): The LLM analyzer instance for extracting model/config info.
         
         Raises:
             VulnhallaError: If file cannot be written (permission denied, etc.).
         """
-        raw_data = json.dumps({
+        raw_dict: Dict[str, Any] = {
             "function_tree_file": function_tree_file,
             "current_function": current_function,
             "db_path": self.db_path,
             "code_path": self.code_path,
             "prompt": prompt
-        }, ensure_ascii=False)
+        }
+        # Include model/provider metadata if available
+        if llm_analyzer is not None:
+            raw_dict["model"] = getattr(llm_analyzer, 'model', None)
+            config = getattr(llm_analyzer, 'config', None)
+            if config:
+                raw_dict["provider"] = config.get("provider", "unknown")
+                raw_dict["temperature"] = config.get("temperature")
+                raw_dict["top_p"] = config.get("top_p")
+
+        raw_data = json.dumps(raw_dict, ensure_ascii=False)
 
         raw_output_file = Path(results_folder) / f"{issue_id}_raw.json"
         write_file_ascii(str(raw_output_file), raw_data)
@@ -412,13 +435,16 @@ class IssueAnalyzer:
             llm_content (str): The text content from the LLM's final response.
 
         Returns:
-            str: "true" if content has '1337', "false" if content has '1007',
+            str: "true" if content has '1337' or '7337-LEAN-VULN', "false" if content has '1007' or '7337-LEAN-SECURE',
+                 "more" for analysis needed (7331) or conflicting evidence without direction,
                  otherwise "more".
         """
-        if "1337" in llm_content:
+        if "1337" in llm_content or "7337-LEAN-VULN" in llm_content:
             return "true"
-        elif "1007" in llm_content:
+        elif "1007" in llm_content or "7337-LEAN-SECURE" in llm_content:
             return "false"
+        elif "7337" in llm_content or "7331" in llm_content:
+            return "more"  # Conflicting evidence without clear direction or more analysis needed
         else:
             return "more"
 
@@ -476,6 +502,7 @@ class IssueAnalyzer:
             if new_function and new_function not in functions:
                 functions.append(new_function)
                 # Read the function's source file and extract its code
+                print(f"@@1Appending extra function {new_function['function_name']} for reference at {file_ref}:{line_ref}")
                 code_file2 = read_file_lines_from_zip(src_zip_path, file_ref).split("\n")
                 code += (
                     "\n\nfile: " + file_ref + "\n" +
@@ -504,7 +531,8 @@ class IssueAnalyzer:
         self,
         issue_type: str,
         issues_of_type: List[Dict[str, str]],
-        llm_analyzer: LLMAnalyzer
+        llm_analyzer: LLMAnalyzer,
+        run_stats: Optional[List[Dict[str, Any]]] = None
     ) -> None:
         """
         Processes all issues of a single type. Builds file/folder paths, runs
@@ -515,18 +543,21 @@ class IssueAnalyzer:
             - Find function; extract snippet [start_offset-1:end_offset]
             - Replace bracket refs; append extra functions if needed
             - Build prompt; save raw/final; run LLM
-            - Classify by '1337'/'1007'/else; log stats
+            - Classify by '1337'/'1007'/'7331'/'7337' with directional confidence; log stats
 
         Args:
             issue_type (str): The name of the issue type.
             issues_of_type (List[Dict[str, str]]): All issues belonging to that type.
             llm_analyzer (LLMAnalyzer): The LLM analyzer instance to use for queries.
+            run_stats (List[Dict], optional): Accumulator list for per-finding stats.
         
         Raises:
             CodeQLError: If database files cannot be read (YAML, ZIP, CSV, etc.).
             VulnhallaError: If result files cannot be written.
             LLMError: If LLM analysis fails.
         """
+        if run_stats is None:
+            run_stats = []
         results_folder = Path("output/results") / self.lang / issue_type.replace(" ", "_").replace("/", "-")
         self.ensure_directories_exist([str(results_folder)])
 
@@ -553,7 +584,9 @@ class IssueAnalyzer:
             # Linux paths are absolute (start with "/") which we remove for ZIP access
             if ":" in self.code_path:
                 # Windows path: normalize drive letter and separators
-                self.code_path = self.code_path.replace(":", "_").replace("\\", "/")
+                #self.code_path = self.code_path.replace(":", "_").replace("\\", "/")
+                self.code_path_in_csv_row = self.code_path.replace("\\", "/")
+                self.code_path = self.code_path_in_csv_row.replace(":", "_")
             else:
                 # Linux path: remove leading slash
                 self.code_path = self.code_path[1:]
@@ -562,11 +595,17 @@ class IssueAnalyzer:
             src_zip_path = str(db_path_obj / "src.zip")
 
             full_file_path = self.code_path + issue["file"]
+            logger.info("*" * 80)
+            logger.info("Processing issue ID %d: %s", issue_id, issue["message"])
+            logger.info("%s, line: %s", issue["file"], issue["start_line"])
+
+            logger.debug(f"@@@3Processing issue {issue_id}: file path in CSV='{issue['file']}', resolved full path='{full_file_path}'")
             code_file_contents = read_file_lines_from_zip(src_zip_path, full_file_path).split("\n")
 
             current_function = self.find_function_by_line(
                 function_tree_file,
-                "/" + self.code_path + issue["file"],
+                #"/" + 
+                self.code_path_in_csv_row + issue["file"],
                 int(issue["start_line"])
             )
             if not current_function:
@@ -576,9 +615,9 @@ class IssueAnalyzer:
             snippet = code_file_contents[int(issue["start_line"]) - 1][
                 int(issue["start_offset"]) - 1:int(issue["end_offset"])
             ]
-
+            logger.debug(f"Extracted snippet: {snippet}")
             code = (
-                "file: " + self.code_path + issue["file"] + "\n" +
+                "file: " + self.code_path_in_csv_row + issue["file"] + "\n" +
                 self.extract_function_code(code_file_contents, current_function)
             )
 
@@ -598,13 +637,14 @@ class IssueAnalyzer:
                 )
 
             prompt = self.build_prompt_by_template(issue, message, snippet, code)
-
+            logger.debug(f"Final prompt for issue {issue_id}:\n{prompt}")
+            logger.debug("*" * 80)
             # Save raw input to the LLM
-            self.save_raw_input_data(prompt, function_tree_file, current_function, results_folder, issue_id)
+            self.save_raw_input_data(prompt, function_tree_file, current_function, results_folder, issue_id, llm_analyzer)
 
             # Send to LLM (with error handling for timeouts and API errors)
             try:
-                messages, content = llm_analyzer.run_llm_security_analysis(
+                messages, content, finding_stats = llm_analyzer.run_llm_security_analysis(
                     prompt,
                     function_tree_file,
                     current_function,
@@ -636,6 +676,14 @@ class IssueAnalyzer:
 
             # Log issue status
             logger.info("Issue ID: %s, LLM decision: → %s", issue_id, status)
+
+            # Track per-finding stats for run summary
+            finding_stats['cid'] = issue.get('name', str(issue_id))
+            finding_stats['issue_type'] = issue_type
+            finding_stats['decision'] = status
+            finding_stats['decision_code'] = content[-4:] if content else ''
+            run_stats.append(finding_stats)
+
             issue_id += 1
 
         logger.info("")
@@ -660,6 +708,7 @@ class IssueAnalyzer:
         
         Args:
             dbs_dir (str): Path to the directory containing downloaded databases.
+                              or a folder that is the database itself.
             
         Raises:
             CodeQLError: If database files cannot be accessed or read.
@@ -668,7 +717,7 @@ class IssueAnalyzer:
         """
         # Validate configuration before starting
         if self.config is None:
-            validate_and_exit_on_error()
+           validate_and_exit_on_error()
         
         llm_analyzer = LLMAnalyzer()
         llm_analyzer.init_llm_client(config=self.config)
@@ -682,9 +731,58 @@ class IssueAnalyzer:
         logger.info("Total issues found: %d", total_issues)
         logger.info("")
 
+        # Run-level stats accumulator
+        run_stats: List[Dict[str, Any]] = []
+        run_start_time = time.time()
+
         # Process all issues, type by type
         for issue_type in issues_statistics.keys():
-            self.process_issue_type(issue_type, issues_statistics[issue_type], llm_analyzer)
+            self.process_issue_type(issue_type, issues_statistics[issue_type], llm_analyzer, run_stats)
+
+        # --- Write run_summary.json ---
+        run_duration = time.time() - run_start_time
+        tp_count = sum(1 for s in run_stats if s.get('decision') == 'True Positive')
+        fp_count = sum(1 for s in run_stats if s.get('decision') == 'False Positive')
+        md_count = sum(1 for s in run_stats if s.get('decision') == 'LLM needs More Data')
+        total_prompt_tokens = sum(s.get('prompt_tokens', 0) for s in run_stats)
+        total_completion_tokens = sum(s.get('completion_tokens', 0) for s in run_stats)
+        total_all_tokens = sum(s.get('total_tokens', 0) for s in run_stats)
+        total_cost = sum(s.get('estimated_cost_usd', 0) for s in run_stats)
+
+        summary = {
+            "run_timestamp": datetime.now(timezone.utc).isoformat(),
+            "model": getattr(llm_analyzer, 'model', None),
+            "provider": (llm_analyzer.config or {}).get("provider", "unknown"),
+            "language": self.lang,
+            "dbs_dir": dbs_dir,
+            "findings_processed": len(run_stats),
+            "totals": {
+                "true_positives": tp_count,
+                "false_positives": fp_count,
+                "more_data": md_count,
+                "prompt_tokens": total_prompt_tokens,
+                "completion_tokens": total_completion_tokens,
+                "total_tokens": total_all_tokens,
+                "estimated_cost_usd": round(total_cost, 4),
+                "run_duration_seconds": round(run_duration, 2),
+            },
+            "averages_per_finding": {
+                "prompt_tokens": total_prompt_tokens // len(run_stats) if run_stats else 0,
+                "completion_tokens": total_completion_tokens // len(run_stats) if run_stats else 0,
+                "total_tokens": total_all_tokens // len(run_stats) if run_stats else 0,
+                "estimated_cost_usd": round(total_cost / len(run_stats), 4) if run_stats else 0,
+            },
+            "findings": run_stats
+        }
+
+        summary_path = Path("output/results") / self.lang / "run_summary.json"
+        self.ensure_directories_exist([str(summary_path.parent)])
+        write_file_ascii(str(summary_path), json.dumps(summary, indent=2, ensure_ascii=False))
+        logger.info("=" * 80)
+        logger.info("RUN SUMMARY written to %s", summary_path)
+        logger.info("Findings: %d | TP: %d | FP: %d | More Data: %d", len(run_stats), tp_count, fp_count, md_count)
+        logger.info("Total tokens: %d | Estimated cost: $%.4f | Duration: %.1fs", total_all_tokens, total_cost, run_duration)
+        logger.info("=" * 80)
 
 if __name__ == '__main__':
     # Initialize logging
@@ -694,4 +792,7 @@ if __name__ == '__main__':
     # Loads configuration from .env file
     # Or use: analyzer = IssueAnalyzer(lang="c", config={...})
     analyzer = IssueAnalyzer(lang="c")
-    analyzer.run()
+    #tracedb = r"C:\tmp\codeql-dbs\simple-cpp-db" 
+    tracedb = r"C:\tmp\codeql-dbs\f20260212" 
+#r"C:\code\codeQL_CoD\codeql"
+    analyzer.run(tracedb)

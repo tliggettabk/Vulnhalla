@@ -6,6 +6,7 @@ working with CodeQL database directories, and other small I/O utilities
 that are shared across multiple parts of the project.
 """
 
+import html
 from pathlib import Path
 import zipfile
 import yaml
@@ -127,9 +128,24 @@ def read_file_lines_from_zip(zip_path: str, file_path_in_zip: str) -> str:
         CodeQLError: If ZIP file cannot be read or file not found in archive.
     """
     try:
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            with zip_ref.open(file_path_in_zip) as file:
-                return file.read().decode('utf-8')
+        # with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        #     with zip_ref.open(file_path_in_zip) as file:
+        #         return file.read().decode('utf-8').replace("\r", "")
+        
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            with zip_ref.open(file_path_in_zip) as f:
+                text = f.read().decode("utf-8", errors="replace")
+
+                # 1) Normalize line endings safely
+                text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+                # 2) Undo common “escaped punctuation” artifacts
+                text = (text
+                        .replace(r"\{", "{").replace(r"\}", "}")
+                        .replace(r"\[", "[").replace(r"\]", "]"))
+
+                return text
+
     except zipfile.BadZipFile as e:
         raise CodeQLError(f"Invalid or corrupted ZIP file: {zip_path}") from e
     except KeyError as e:

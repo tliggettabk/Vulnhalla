@@ -100,6 +100,9 @@ def setup_logging(
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(numeric_level)
+    # Ensure all handlers (console, file) also get DEBUG level if requested
+    for handler in root_logger.handlers:
+        handler.setLevel(numeric_level)
     
     # Remove existing handlers to avoid duplicates
     root_logger.handlers.clear()
@@ -189,7 +192,12 @@ def setup_logging(
                 # For INFO level, always use minimal format (just the message)
                 if record.levelno == logging.INFO:
                     return record.getMessage()
-                # For WARNING, ERROR, CRITICAL
+                # For DEBUG, WARNING, ERROR, CRITICAL
+                elif record.levelno == logging.DEBUG:
+                    if self.verbose and self._full_formatter:
+                        return self._full_formatter.format(record)
+                    else:
+                        return super().format(record)
                 else:
                     if self.verbose and self._full_formatter:
                         # Use full format with timestamp when verbose mode is enabled
@@ -229,7 +237,9 @@ def setup_logging(
         except Exception as e:
             # If file logging fails, log to console and continue
             root_logger.warning("Failed to set up file logging: %s", e)
-    
+    # Ensure all handlers get the correct level after all are added
+    for handler in root_logger.handlers:
+        handler.setLevel(numeric_level)
     _logging_initialized = True
 
 

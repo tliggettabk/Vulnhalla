@@ -199,6 +199,10 @@ def run_queries_on_db(
         logger.warning("Tools folder '%s' not found. Skipping individual queries.", tools_folder)
 
     # 2) Run the entire queries folder in one go using database analyze
+    if queries_folder is None:
+        logger.info("No queries folder specified, skipping database analysis.")
+        return
+
     queries_folder_path = Path(queries_folder)
     if queries_folder_path.is_dir():
         try:
@@ -262,11 +266,13 @@ def compile_and_run_codeql_queries(
     # Setup paths
     queries_subfolder = "cpp" if lang == "c" else lang
     queries_folder = str(Path("data/queries") / queries_subfolder / "issues")
+    queries_folder = None
     tools_folder = str(Path("data/queries") / queries_subfolder / "tools")
 
     # Step 1: Pre-compile all queries
     compile_all_queries(tools_folder, threads, codeql_bin)
-    compile_all_queries(queries_folder, threads, codeql_bin)
+    if queries_folder is not None:
+        compile_all_queries(queries_folder, threads, codeql_bin)
 
     # Step 2: Run queries
     # Validate database directory exists and is accessible

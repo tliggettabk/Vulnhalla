@@ -12,6 +12,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -279,6 +280,8 @@ See README.md for configuration reference.
         logger.info("-" * 60)
         logger.info("Database path: %s", local_db_path)
         dbs_dir = local_db_path
+    elif repo and os.path.exists(repo):
+        dbs_dir = repo
     else:
         dbs_dir = step1_fetch_codeql_dbs(lang, threads, repo, force)
     

@@ -27,6 +27,7 @@ class Issue:
         final_data (Optional[List]): Parsed final JSON containing LLM messages.
         manual_decision (Optional[str]): Manual verdict set by user ("True Positive", 
             "False Positive", "Uncertain", or None for "Not Set").
+        message (Optional[str]): Detailed vulnerability description/help text.
     """
     id: str
     name: str
@@ -41,6 +42,7 @@ class Issue:
     raw_data: Optional[Dict] = None
     final_data: Optional[List] = None
     manual_decision: Optional[str] = None
+    message: Optional[str] = None
 
 
 # Constants for status ordering (used in sorting)

@@ -94,16 +94,18 @@ class ResultsLoader:
             content (str): The LLM message content to analyze.
 
         Returns:
-            str: Status code - "true" (if 1337 found), "false" (if 1007 found), 
-                or "more" (otherwise).
+            str: Status code - "true" (if 1337 or 7337-LEAN-VULN found), "false" (if 1007 or 7337-LEAN-SECURE found), 
+                "more" (if 7331/7337 without direction found or otherwise).
         """
         if not content:
             return "more"
         content_lower = content.lower()
-        if "1337" in content_lower:
+        if "1337" in content_lower or "7337-lean-vuln" in content_lower:
             return "true"
-        elif "1007" in content_lower:
+        elif "1007" in content_lower or "7337-lean-secure" in content_lower:
             return "false"
+        elif "7337" in content_lower or "7331" in content_lower:
+            return "more"  # Conflicting evidence without clear direction or more analysis needed
         return "more"
 
 
@@ -256,6 +258,41 @@ class ResultsLoader:
                 return name_match.group(1).strip()
         return issue_name
 
+    @staticmethod
+    def _extract_vulnerability_type(raw_data: Dict, fallback_type: str) -> str:
+        """
+        Extract the vulnerability type from the prompt's Description field.
+        
+        Args:
+            raw_data (Dict): Raw JSON data containing prompt.
+            fallback_type (str): Fallback type if extraction fails.
+            
+        Returns:
+            str: Vulnerability type (e.g., "Memory - illegal accesses") or fallback.
+        """
+        if "prompt" in raw_data:
+            desc_match = re.search(r'Description:\s*([^\n]+)', raw_data["prompt"])
+            if desc_match:
+                return desc_match.group(1).strip()
+        return fallback_type
+    
+    @staticmethod
+    def _extract_message(raw_data: Dict) -> Optional[str]:
+        """
+        Extract the detailed message/help text from the prompt's Message field.
+        
+        Args:
+            raw_data (Dict): Raw JSON data containing prompt.
+            
+        Returns:
+            Optional[str]: Message text or None if not found.
+        """
+        if "prompt" in raw_data:
+            msg_match = re.search(r'Message:\s*([^\n]+)', raw_data["prompt"])
+            if msg_match:
+                return msg_match.group(1).strip()
+        return None
+
 
     @staticmethod
     def _extract_file_info(raw_data: Dict) -> tuple[str, int]:
@@ -330,15 +367,16 @@ class ResultsLoader:
             if not issue_type_dir.is_dir():
                 continue
             
-            issue_type = issue_type_dir.name
+            issue_dir_name = issue_type_dir.name
             
             # Find all _final.json files
             for final_file in issue_type_dir.glob("*_final.json"):
-                # Extract issue ID from filename
-                issue_id = final_file.stem.replace("_final", "")
+                # Extract issue ID from directory name (not filename)
+                issue_id = issue_type_dir.name
                 
-                # Find corresponding _raw.json
-                raw_file = final_file.parent / f"{issue_id}_raw.json"
+                # Find corresponding _raw.json (using actual filename structure)
+                file_prefix = final_file.stem.replace("_final", "")
+                raw_file = final_file.parent / f"{file_prefix}_raw.json"
                 
                 if not raw_file.exists():
                     errors.append(f"Missing raw file for issue {issue_id}: {raw_file}")
@@ -357,7 +395,9 @@ class ResultsLoader:
                     continue
                 
                 file_basename, start_line = self._extract_file_info(raw_data)
-                issue_name = self._extract_issue_name(raw_data, issue_type)
+                issue_name = self._extract_issue_name(raw_data, issue_dir_name)
+                issue_type = self._extract_vulnerability_type(raw_data, issue_dir_name)
+                message = self._extract_message(raw_data)
                 
                 # Extract repo from db_path in raw_data
                 db_path = raw_data.get("db_path", "")
@@ -393,7 +433,8 @@ class ResultsLoader:
                     raw_path=str(raw_file),
                     final_path=str(final_file),
                     raw_data=raw_data,
-                    final_data=final_data
+                    final_data=final_data,
+                    message=message
                 )
                 issues.append(issue)
         

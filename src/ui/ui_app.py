@@ -406,6 +406,10 @@ class VulnhallaUI(App):
         details_parts.append(f"[bold]File:[/bold] {markup_escape(issue.file)}:{issue.line}")
         details_parts.append(f"[bold]Type:[/bold] {markup_escape(issue.issue_type)}")
         
+        # Add detailed message if available
+        if issue.message:
+            details_parts.append(f"[bold]Message:[/bold] {markup_escape(issue.message)}")
+        
         # Add function name if available
         if issue.raw_data and "current_function" in issue.raw_data:
             func = issue.raw_data["current_function"]
