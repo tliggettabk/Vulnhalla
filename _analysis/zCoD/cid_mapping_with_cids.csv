@@ -1,0 +1,251 @@
+issue_id,original_cid,first_detected,severity,component,function,impact,abk_classification,name_with_cid
+1,29728,09/08/25,Critical,Other,DrawSetup_Volumetric,High,Suspicious,CID29728-Out-of-bounds read
+2,29720,09/03/25,Critical,Other,BG_PlayerASM_AreAnimationsLoadedForCondition,High,Suspicious,CID29720-Out-of-bounds read
+3,29717,09/03/25,Critical,Other,BG_PlayerASM_AreAnimationsLoadedForCondition,High,Suspicious,CID29717-Out-of-bounds access
+4,29716,08/25/25,Critical,Other,RewindForAsset,High,Suspicious,CID29716-Out-of-bounds write
+5,29710,08/19/25,Critical,Other,Engine_ResetKey,High,Suspicious,CID29710-Out-of-bounds access
+6,29696,08/13/25,Critical,Other,Free,High,Suspicious,CID29696-Out-of-bounds access
+7,29689,08/13/25,Critical,Other,BG_BuildSound_AliasId,High,Suspicious,CID29689-Buffer not null terminated
+8,29686,08/13/25,Critical,Other,PlayerSpawn_Frontline_UpdateData,High,Suspicious,CID29686-Out-of-bounds read
+9,29685,08/13/25,Critical,Other,GScr_MainMP_GetPlayerData,High,Suspicious,CID29685-Out-of-bounds access
+10,29684,08/13/25,Critical,Other,PlayerAnimset_GatherCollections,High,Suspicious,CID29684-Out-of-bounds access
+11,29683,08/13/25,Critical,Other,R_Universe_BeginAccessFrame,High,Suspicious,CID29683-Out-of-bounds write
+12,29681,08/13/25,Critical,Other,BG_BuildSound_AliasId,High,Suspicious,CID29681-Buffer not null terminated
+13,29675,08/13/25,Critical,Other,CG_CommonItem_GetHUDOutline,High,Suspicious,CID29675-Out-of-bounds read
+14,29673,08/13/25,Critical,Other,R_Water_Tile_SubmitBuckets,High,Suspicious,CID29673-Out-of-bounds access
+15,29672,08/13/25,Critical,Other,PlayerSpawn_Frontline_UpdateData,High,Suspicious,CID29672-Out-of-bounds write
+16,29669,08/13/25,Critical,Other,Bot_GetZonePathToGoal,High,Suspicious,CID29669-Out-of-bounds access
+17,29668,08/13/25,Critical,Other,Bot_UpdateName,High,Suspicious,CID29668-Out-of-bounds read
+18,29657,08/13/25,Critical,Other,PlayerSpawn_Selection_UpdateDistanceData,High,Suspicious,CID29657-Out-of-bounds write
+19,29654,08/13/25,Critical,Other,GScr_MainMP_SetPlayerData,High,Suspicious,CID29654-Out-of-bounds access
+20,29652,08/13/25,Critical,Other,LUI_Render_SendCommandMarkCurrentRTTAsDirty,High,Suspicious,CID29652-Out-of-bounds access
+21,29651,08/13/25,Critical,Other,PM_traceHandler,High,Suspicious,CID29651-Out-of-bounds access
+22,29643,08/13/25,Critical,Other,CG_LwCorpseManager_ConfirmReservations,High,Suspicious,CID29643-Out-of-bounds read
+23,29637,08/13/25,Critical,Other,PlayerAnimset_WeaponHasStreamedAnimations,High,Suspicious,CID29637-Out-of-bounds access
+24,29634,08/13/25,Critical,Other,PlayerAnimset_TouchWeapon,High,Suspicious,CID29634-Out-of-bounds access
+25,29633,08/13/25,Critical,Other,ImportSettings_RequestGenericCloudFiles,High,Suspicious,CID29633-Out-of-bounds access
+26,29628,06/18/25,Critical,Other,GetEventTypeByName,High,Suspicious,CID29628-Out-of-bounds read
+27,29622,06/18/25,Critical,Other,BG_Customization_SetRandomCustomization,High,Suspicious,CID29622-Out-of-bounds access
+28,29621,06/18/25,Critical,Other,CG_ServerCmdMP_ReadPlayerPersistentDataChanges_Direct_Access,High,Suspicious,CID29621-Out-of-bounds access
+29,29620,06/18/25,Critical,Other,GetCivEventName,High,Suspicious,CID29620-Out-of-bounds read
+30,29619,06/10/25,Critical,Other,AddLightGrid,High,Suspicious,CID29619-Out-of-bounds write
+31,29617,06/10/25,Critical,Other,AddLightGrid,High,Suspicious,CID29617-Out-of-bounds read
+32,29615,06/10/25,Critical,Other,XAnim_HitDet_GetTreeParametersInfo,High,Suspicious,CID29615-Out-of-bounds write
+33,29613,06/03/25,Critical,Other,StreamDeck_HandleRequest,Medium,Suspicious,CID29613-Untrusted pointer write
+34,29587,05/28/25,Critical,Other,MoveObjectToPosition,High,Suspicious,CID29587-Out-of-bounds read
+35,29586,05/28/25,Critical,Other,dwGetEnvironmentFlavorForTitleId,High,Suspicious,CID29586-Out-of-bounds read
+36,29582,05/28/25,Critical,Other,CL_PlayerData_UpdateDDLChecksum,High,Suspicious,CID29582-Out-of-bounds access
+37,29580,05/28/25,Critical,Other,dwRegisterEnvironmentDvars,High,Suspicious,CID29580-Illegal address computation
+38,29579,05/28/25,Critical,Other,RemoveObject,High,Suspicious,CID29579-Out-of-bounds read
+39,29578,05/28/25,Critical,Other,dwGetTitleIdsForFlavor,High,Suspicious,CID29578-Out-of-bounds read
+40,29577,05/28/25,Critical,Other,RemoveAllObjectsInCategory,High,Suspicious,CID29577-Out-of-bounds read
+41,29576,05/28/25,Critical,Other,LUI_CoD_PlayerData_TriggerCallbackOnPlayerDataWrite,High,Suspicious,CID29576-Out-of-bounds access
+42,29553,05/21/25,Critical,Other,R_TG_ReserveResourceMemory,High,Suspicious,CID29553-Out-of-bounds write
+43,29552,05/21/25,Critical,Other,AllocLightmap,High,Suspicious,CID29552-Out-of-bounds write
+44,29548,05/14/25,Critical,Other,AddLGVBlock,High,Suspicious,CID29548-Out-of-bounds read
+45,29545,05/14/25,Critical,Other,GetCreatorContext,High,Suspicious,CID29545-Buffer not null terminated
+46,29544,05/14/25,Critical,Other,Stream_CombineDistanceImageToParts_Regular,High,Suspicious,CID29544-Out-of-bounds access
+47,29543,05/14/25,Critical,Other,AllocLGVBlock,High,Suspicious,CID29543-Out-of-bounds write
+48,29540,05/14/25,Critical,Other,AddLGVBlock,High,Suspicious,CID29540-Out-of-bounds access
+49,29532,05/14/25,Critical,Other,AddLGVBlock,High,Suspicious,CID29532-Out-of-bounds write
+50,29508,05/07/25,Critical,Other,AddLightmaps,High,Suspicious,CID29508-Out-of-bounds write
+51,29467,04/29/25,Critical,Other,ReadWeaponsCustomizationFromProfile,High,Suspicious,CID29467-Out-of-bounds access
+52,29462,04/29/25,Critical,Other,BulletImpactEffects,High,Suspicious,CID29462-Out-of-bounds access
+53,29457,04/29/25,Critical,Other,AIScr_SetCivAutomaticStateTransitionSettings,High,Suspicious,CID29457-Out-of-bounds access
+54,29455,04/29/25,Critical,Other,Material_CreateComputePipelineState,High,Suspicious,CID29455-Out-of-bounds access
+55,29453,04/29/25,Critical,Other,BG_Execution_GetStreamCollectionForExecutionAnimType,High,Suspicious,CID29453-Out-of-bounds access
+56,29427,04/29/25,Critical,Other,CL_TransientsVisibility_FillVisibilityBitArray,High,Suspicious,CID29427-Out-of-bounds access
+57,29420,04/29/25,Critical,Other,AIScr_SetCivPropagationSettings,High,Suspicious,CID29420-Out-of-bounds access
+58,29415,04/29/25,Critical,Other,CL_TransientsVisibility_FillVisibilityHintBitArray,High,Suspicious,CID29415-Out-of-bounds access
+59,29412,04/29/25,Critical,Other,RegisterNotificationCallback,High,Suspicious,CID29412-Out-of-bounds access
+60,29407,04/29/25,Critical,Other,RegisterReadyCallback,High,Suspicious,CID29407-Out-of-bounds access
+61,29406,04/29/25,Critical,Other,CG_WorldStreaming_TouchClientStreamManualViews,High,Suspicious,CID29406-Out-of-bounds access
+62,29397,04/29/25,Critical,Other,SetLinked,High,Suspicious,CID29397-Out-of-bounds access
+63,29391,04/29/25,Critical,Other,GetHalfEdgeMesh,High,Suspicious,CID29391-Out-of-bounds access
+64,29390,04/29/25,Critical,Other,TriDiagQL,High,Suspicious,CID29390-Out-of-bounds access
+65,29388,04/29/25,Critical,Other,SetLinked,High,Suspicious,CID29388-Out-of-bounds access
+66,29386,04/29/25,Critical,Other,GetConflicts,High,Suspicious,CID29386-Out-of-bounds access
+67,29376,03/19/25,Critical,Other,Target_Alloc,High,Suspicious,CID29376-Out-of-bounds read
+68,29333,03/19/25,Critical,Other,BGScr_SetSavedDvar,High,Suspicious,CID29333-Out-of-bounds read
+69,29318,03/19/25,Critical,Other,GScr_Weapon_SetWeapon,High,Suspicious,CID29318-Out-of-bounds access
+70,29316,03/19/25,Critical,Other,GScr_MainMP_IsEnumValueValid,High,Suspicious,CID29316-Out-of-bounds access
+71,29305,03/19/25,Critical,Other,Scr_DoLoadEntity,High,Suspicious,CID29305-Out-of-bounds access
+72,29193,03/05/25,Critical,Other,AllocateAtlasZone,High,Suspicious,CID29193-Out-of-bounds write
+73,29190,03/05/25,Critical,Other,AllocTempCPUFence,High,Suspicious,CID29190-Out-of-bounds write
+74,29171,02/25/25,Critical,Other,DB_Zones_BeginZoneLoad,High,Suspicious,CID29171-Out-of-bounds access
+75,29160,02/25/25,Critical,Other,DB_Zones_BeginZoneLoad,High,Suspicious,CID29160-Out-of-bounds write
+76,29137,02/10/25,Critical,Other,PhysicsRT_GetEntityNum,High,Suspicious,CID29137-Out-of-bounds access
+77,29134,02/10/25,Critical,Other,R_TG_Barrier2_FlushElements,High,Suspicious,CID29134-Out-of-bounds write
+78,29043,01/29/25,Critical,Other,MapVoxelizedState_RingBufferReceive_ReadStaleSnapshot,High,Suspicious,CID29043-Out-of-bounds read
+79,29030,01/24/25,Critical,Other,G_CommonItem_DisableOverlappingCoverNodesForInstance,High,Suspicious,CID29030-Out-of-bounds read
+80,29025,01/24/25,Critical,Other,DynEntCL_Spatial_FindPartitionForDynEnt,High,Suspicious,CID29025-Out-of-bounds read
+81,27771,11/22/24,Critical,Other,BG_PlayerASM_IsTransitionQuadrant,High,Suspicious,CID27771-Out-of-bounds read
+82,27732,11/22/24,Critical,Other,DLog_LuaValue,High,Suspicious,CID27732-Out-of-bounds access
+83,27550,10/30/24,Critical,Other,BG_PlayerASM_IsTransitionInputClockwise,High,Suspicious,CID27550-Out-of-bounds read
+84,27541,10/30/24,Critical,Other,RecreateElementWithSubType,High,Suspicious,CID27541-Out-of-bounds access
+85,27485,10/21/24,Critical,Other,DynamicInteractionPartitioning_AddInteractionToGrid,High,Suspicious,CID27485-Out-of-bounds write
+86,27427,10/14/24,Critical,Other,FindPosOnPath,High,Suspicious,CID27427-Out-of-bounds access
+87,27425,10/14/24,Critical,Other,GetAnimMappingEntry,High,Suspicious,CID27425-Out-of-bounds read
+88,27415,10/02/24,Critical,Other,operator (),High,Suspicious,CID27415-Out-of-bounds read
+89,27396,09/27/24,Critical,Other,Trust_VerifyEmbeddedSignature,High,Suspicious,CID27396-Out-of-bounds access
+90,27392,09/27/24,Critical,Other,BG_CommonItem_CheckIfItemDefHasTag,High,Suspicious,CID27392-Out-of-bounds read
+91,27377,09/27/24,Critical,Other,Weather_GridDynamic_IsPrecipitating,High,Suspicious,CID27377-Out-of-bounds access
+92,27376,09/27/24,Critical,Other,Weather_GridDynamic_UpdateTiles,High,Suspicious,CID27376-Out-of-bounds access
+93,27360,09/16/24,Critical,Other,db_huft_build,High,Suspicious,CID27360-Out-of-bounds read
+94,27300,09/16/24,Critical,Other,db_huft_build,High,Suspicious,CID27300-Out-of-bounds read
+95,27244,09/11/24,Critical,Other,CG_Pose_DoBaseOriginController,High,Suspicious,CID27244-Out-of-bounds read
+96,27190,09/10/24,Critical,Other,GetHalfEdgeMesh,High,Suspicious,CID27190-Out-of-bounds write
+97,27182,09/10/24,Critical,Other,Weather_GridDynamic_Tile_Downscale,High,Suspicious,CID27182-Out-of-bounds write
+98,27174,09/10/24,Critical,Other,Weather_GridDynamic_Tile_Downscale,High,Suspicious,CID27174-Out-of-bounds read
+99,27097,08/23/24,Critical,Other,CG_Hang_PopulateIKTimings,High,Suspicious,CID27097-Out-of-bounds read
+100,27094,08/23/24,Critical,Other,DB_BinaryPatch_BeginManifestLoad,High,Suspicious,CID27094-Out-of-bounds read
+101,27093,08/23/24,Critical,Other,DB_BinaryPatch_BeginManifestLoad,High,Suspicious,CID27093-Out-of-bounds read
+102,27064,08/01/24,Critical,Other,G_Objectives_Update,High,Suspicious,CID27064-Out-of-bounds access
+103,27060,08/01/24,Critical,Other,G_PIP_Read,High,Suspicious,CID27060-Out-of-bounds access
+104,27059,08/01/24,Critical,Other,DB_Zones_SetZoneFlag,High,Suspicious,CID27059-Out-of-bounds write
+105,27056,08/01/24,Critical,Other,stbi__parse_huffman_block,High,Suspicious,CID27056-Out-of-bounds read
+106,27055,08/01/24,Critical,Other,stbi__parse_huffman_block,High,Suspicious,CID27055-Out-of-bounds read
+107,27054,08/01/24,Critical,Other,PatchCollision_AreaSwap_GetShapeForLoad,High,Suspicious,CID27054-Out-of-bounds read
+108,27046,08/01/24,Critical,Other,Com_PlayerData_CacheStatsGroupData,High,Suspicious,CID27046-Out-of-bounds write
+109,27044,08/01/24,Critical,Other,NetConstStrings_RegisterScriptDvars,High,Suspicious,CID27044-Out-of-bounds write
+110,27043,08/01/24,Critical,Other,DB_Zones_Init,High,Suspicious,CID27043-Out-of-bounds write
+111,27036,08/01/24,Critical,Other,SaveSP_Read,High,Suspicious,CID27036-Out-of-bounds access
+112,27034,08/01/24,Critical,Other,DB_Zones_UpdateZoneFlagLoadOrder,High,Suspicious,CID27034-Out-of-bounds read
+113,27031,08/01/24,Critical,Other,stbi__parse_huffman_block,High,Suspicious,CID27031-Out-of-bounds read
+114,27029,08/01/24,Critical,Other,DB_Zones_ResetZoneFlag,High,Suspicious,CID27029-Out-of-bounds write
+115,27025,08/01/24,Critical,Other,stbi__parse_huffman_block,High,Suspicious,CID27025-Out-of-bounds read
+116,27016,07/31/24,Critical,Other,Online_ArchiveReplayPlayback_Setup,High,Suspicious,CID27016-Buffer not null terminated
+117,26847,07/31/24,Critical,Other,R_UpdateCurrentAndDefaultAdapter,High,Suspicious,CID26847-Out-of-bounds access
+118,26822,07/31/24,Critical,Other,Engine_GetDownloadHistoryText,High,Suspicious,CID26822-Illegal address computation
+119,26803,07/31/24,Critical,Other,LiveStorage_IsStatsGroupObfuscated,High,Suspicious,CID26803-Out-of-bounds read
+120,26790,07/31/24,Critical,Other,LiveStorage_GetPlayerDataBufferSize,High,Suspicious,CID26790-Out-of-bounds access
+121,26768,07/31/24,Critical,Other,Com_PlayerData_GetStatsGroupSize,High,Suspicious,CID26768-Out-of-bounds access
+122,26759,07/31/24,Critical,Other,CG_ClientModel_DeferredCollisions_ExecuteVelocitiesSubRequestRun,High,Suspicious,CID26759-Out-of-bounds write
+123,26671,07/31/24,Critical,Other,GetUserProfileForUI,High,Suspicious,CID26671-Out-of-bounds access
+124,26580,07/31/24,Critical,Other,GetChannel,High,Suspicious,CID26580-Out-of-bounds access
+125,26523,07/31/24,Critical,Other,Com_PlayerData_GetStatsGroupOffset,High,Suspicious,CID26523-Out-of-bounds access
+126,26475,07/31/24,Critical,Other,BG_VehicleLeanOut_StartLerpViewAngles,High,Suspicious,CID26475-Out-of-bounds read
+127,26379,07/31/24,Critical,Other,DynEntCL_DeferredCollisions_ExecuteVelocitiesSubRequestRun,High,Suspicious,CID26379-Out-of-bounds write
+128,26324,07/31/24,Critical,Other,Engine_GetDownloadHistoryText,High,Suspicious,CID26324-Out-of-bounds read
+129,26318,07/31/24,Critical,Other,ReadCustomizationModelsForProfile,High,Suspicious,CID26318-Out-of-bounds access
+130,26311,07/31/24,Critical,Other,CL_PlayerData_SetStatsBlobDirty,High,Suspicious,CID26311-Out-of-bounds access
+131,26284,07/31/24,Critical,Other,RecvFrom,High,Suspicious,CID26284-Illegal address computation
+132,26280,07/31/24,Critical,Other,R_RegisterFont,High,Suspicious,CID26280-Out-of-bounds write
+133,26273,07/31/24,Critical,Other,LiveStorage_GetStatsGroupBuffer,High,Suspicious,CID26273-Out-of-bounds access
+134,26235,07/31/24,Critical,Other,Com_PlayerData_GetStatsGroupDataSize,High,Suspicious,CID26235-Out-of-bounds access
+135,26124,07/31/24,Critical,Other,CG_ServerCmdSP_LocalSoundPlay,High,Suspicious,CID26124-Out-of-bounds access
+136,26045,07/31/24,Critical,Other,Online_InstanceInventory_ReadGameModeSettings,Low,Suspicious,CID26045-Copy into fixed size buffer
+137,26034,07/31/24,Critical,Other,GetElementById,High,Suspicious,CID26034-Out-of-bounds access
+138,25987,03/29/24,Critical,Other,WaterDynamic_PhysicsBehaviour_IsInDelay,High,Suspicious,CID25987-Out-of-bounds access
+139,25764,03/29/24,Critical,Other,CG_Utils_ProcessNotetracksWorldRemap,High,Suspicious,CID25764-Out-of-bounds access
+140,25720,03/29/24,Critical,Other,Read,High,Suspicious,CID25720-Out-of-bounds write
+141,25520,03/29/24,Critical,Other,SV_SnapWorkersMP_BuildServerScriptablesCmd,Medium,Suspicious,CID25520-Untrusted value as argument
+142,25502,03/29/24,Critical,Other,DynEntCL_Spatial_MarkIfMissingCollisionTiles,High,Suspicious,CID25502-Out-of-bounds access
+143,25352,03/29/24,Critical,Other,BG_CommonItem_GenerateFullWeaponStrings,High,Suspicious,CID25352-Out-of-bounds write
+144,25232,03/29/24,Critical,Other,DDL_ParseExt,High,Suspicious,CID25232-Out-of-bounds write
+145,25193,03/29/24,Critical,Other,DDL_BeginParseSession,High,Suspicious,CID25193-Out-of-bounds read
+146,25110,03/29/24,Critical,Other,CG_ClientCharacter_CreateNoteModel,High,Suspicious,CID25110-Buffer not null terminated
+147,25077,03/29/24,Critical,Other,CL_ParseMP_ParsePacketEntities,High,Suspicious,CID25077-Out-of-bounds access
+148,24998,03/29/24,Critical,Other,CheckMessageProfanityComplete,Low,Suspicious,CID24998-Copy into fixed size buffer
+149,24714,03/29/24,Critical,Other,GetComponent,High,Suspicious,CID24714-Out-of-bounds access
+150,24664,03/29/24,Critical,Other,Init,Low,Suspicious,CID24664-Copy into fixed size buffer
+151,24600,03/29/24,Critical,Other,CG_Weapon_AddViewmodelHand,High,Suspicious,CID24600-Out-of-bounds access
+152,24579,03/29/24,Critical,Other,ResolveNewAddr,High,Suspicious,CID24579-Illegal address computation
+153,24548,03/29/24,Critical,Other,XAnimFrameStreaming_AddAnim,High,Suspicious,CID24548-Out-of-bounds access
+154,24422,03/29/24,Critical,Other,G_SaveSP_ReadBadPlaces,High,Suspicious,CID24422-Out-of-bounds access
+155,24293,03/29/24,Critical,Other,DObjGetBasePoseMatrix,High,Suspicious,CID24293-Out-of-bounds read
+156,24077,03/29/24,Critical,Other,PhysicsRT_Vehicle_BuoyancyCast,High,Suspicious,CID24077-Out-of-bounds access
+157,24015,03/29/24,Critical,Other,PatchCollision_AreaSwap_Update,High,Suspicious,CID24015-Out-of-bounds write
+158,23977,03/29/24,Critical,Other,ProcessScriptableCandidateHit,High,Suspicious,CID23977-Out-of-bounds access
+159,23844,03/29/24,Critical,Other,Info_CopyValues,High,Suspicious,CID23844-Destination buffer too small
+160,23609,03/29/24,Critical,Other,SV_SnapshotMP_EmitClientMessageScriptables,Medium,Suspicious,CID23609-Untrusted value as argument
+161,23599,03/29/24,Critical,Other,G_SaveSP_ReadPathNodes,High,Suspicious,CID23599-Out-of-bounds access
+162,23530,03/29/24,Critical,Other,WaterDynamics_Physics_UnlockContextForWorld,High,Suspicious,CID23530-Out-of-bounds access
+163,23524,03/29/24,Critical,Other,ReadThreatBiasGroups,High,Suspicious,CID23524-Out-of-bounds access
+164,23091,03/29/24,Critical,Other,BG_PlayerASM_IsTransitionReverse,High,Suspicious,CID23091-Out-of-bounds read
+165,23029,03/29/24,Critical,Other,BG_Emote_GetStreamCollection,High,Suspicious,CID23029-Out-of-bounds access
+166,22919,03/29/24,Critical,Other,SetComponentCacheStatus,High,Suspicious,CID22919-Out-of-bounds access
+167,22888,03/29/24,Critical,Other,PhysicsDestroyEffector,High,Suspicious,CID22888-Out-of-bounds access
+168,22871,03/29/24,Critical,Other,WaterDynamics_Physics_LockContextForWorld,High,Suspicious,CID22871-Out-of-bounds access
+169,22860,03/29/24,Critical,Other,PhysicsDestroyComponent,High,Suspicious,CID22860-Out-of-bounds access
+170,22792,03/29/24,Critical,Other,SD_VoicePitchStereoEnv,High,Suspicious,CID22792-Out-of-bounds read
+171,22768,03/29/24,Critical,Other,PatchCollision_AreaSwap_DestroyPhysicsInstances,High,Suspicious,CID22768-Out-of-bounds write
+172,22709,03/29/24,Critical,Other,PhysicsRT_IsClientEntitylessScriptable,High,Suspicious,CID22709-Out-of-bounds access
+173,22665,03/29/24,Critical,Other,onConsoleBanned,High,Suspicious,CID22665-Out-of-bounds access
+174,22641,03/29/24,Critical,Other,R_ProcessDynamicLightBSP_r,High,Suspicious,CID22641-Out-of-bounds read
+175,22543,03/29/24,Critical,Other,R_DynLightBSPNode_ComputeBounds,High,Suspicious,CID22543-Out-of-bounds read
+176,22455,03/29/24,Critical,Other,LUIElement_Anchored_GetWorldPosition,High,Suspicious,CID22455-Out-of-bounds access
+177,22395,03/29/24,Critical,Other,ProcessRequest,High,Suspicious,CID22395-Out-of-bounds access
+178,22357,03/29/24,Critical,Other,CG_ReloadCheckpointGetBlendTime,High,Suspicious,CID22357-Out-of-bounds access
+179,22183,03/29/24,Critical,Other,SV_SnapshotMP_ResolveWeaponMap,Medium,Suspicious,CID22183-Untrusted value as argument
+180,22177,03/29/24,Critical,Other,G_TurretSP_SaveGame_Read,High,Suspicious,CID22177-Out-of-bounds access
+181,22167,03/29/24,Critical,Other,ResolveNewAddr,High,Suspicious,CID22167-Out-of-bounds access
+182,22145,03/29/24,Critical,Other,Online_DcQos_SetResultState,High,Suspicious,CID22145-Out-of-bounds write
+183,22143,03/29/24,Critical,Other,BG_CommonItem_GenerateFullWeaponStrings,High,Suspicious,CID22143-Out-of-bounds write
+184,22081,03/29/24,Critical,Other,DetachComponentInternal,High,Suspicious,CID22081-Out-of-bounds access
+185,21953,03/29/24,Critical,Other,GetElementIdByType,High,Suspicious,CID21953-Out-of-bounds access
+186,21764,03/29/24,Critical,Other,GetComponentCacheStatus,High,Suspicious,CID21764-Out-of-bounds access
+187,21670,03/29/24,Critical,Other,PhysicsRT_Vehicle_BuoyancyCast,High,Suspicious,CID21670-Out-of-bounds access
+188,21656,03/29/24,Critical,Other,PatchCollision_AreaSwap_GetShapeForLoad,High,Suspicious,CID21656-Out-of-bounds read
+189,21563,03/29/24,Critical,Other,GetComponentCacheStatus,High,Suspicious,CID21563-Out-of-bounds access
+190,21524,03/29/24,Critical,Other,ProcessTokenTransfersForTransitionRecursive,High,Suspicious,CID21524-Illegal address computation
+191,21162,02/13/24,Critical,Other,onPlayerBanned,High,Suspicious,CID21162-Out-of-bounds access
+192,21106,02/13/24,Critical,Other,MemFile_WriteDataInternal,High,Suspicious,CID21106-Out-of-bounds read
+193,21051,02/13/24,Critical,Other,GameSwitchOffhandEvent,Medium,Suspicious,CID21051-Untrusted value as argument
+194,21030,02/13/24,Critical,Other,GetElementById,High,Suspicious,CID21030-Out-of-bounds access
+195,21024,02/13/24,Critical,Other,Allocate,High,Suspicious,CID21024-Out-of-bounds write
+196,20851,02/13/24,Critical,Other,CG_Hang_HandleEvent,High,Suspicious,CID20851-Out-of-bounds access
+197,20836,02/13/24,Critical,Other,XAnimTrace_TryGetDeferredRaycastResult,High,Suspicious,CID20836-Out-of-bounds read
+198,20833,02/13/24,Critical,Other,AddFrom,High,Suspicious,CID20833-Out-of-bounds write
+199,20815,02/13/24,Critical,Other,GetElementById,High,Suspicious,CID20815-Out-of-bounds access
+200,20802,02/13/24,Critical,Other,Bot_DifficultyFromString,High,Suspicious,CID20802-Out-of-bounds read
+201,20613,02/13/24,Critical,Other,onNotWhiteListed,High,Suspicious,CID20613-Out-of-bounds access
+202,20212,02/13/24,Critical,Other,CalcSDFPoints,High,Suspicious,CID20212-Out-of-bounds access
+203,20102,02/13/24,Critical,Other,Read,High,Suspicious,CID20102-Out-of-bounds write
+204,19775,02/13/24,Critical,Other,GetBladeDeflectionForRotorIndex,High,Suspicious,CID19775-Out-of-bounds read
+205,19771,02/13/24,Critical,Other,Com_DDL_ReadOnlyFromText,Low,Suspicious,CID19771-Copy into fixed size buffer
+206,19751,02/13/24,Critical,Other,BG_AnimationState_GetAnimsetByIndex,High,Suspicious,CID19751-Out-of-bounds read
+207,19748,02/13/24,Critical,Other,Read,High,Suspicious,CID19748-Out-of-bounds read
+208,19644,02/13/24,Critical,Other,dwGetEnvironmentName,High,Suspicious,CID19644-Out-of-bounds read
+209,19586,02/13/24,Critical,Other,SD_AD_SpawnThread,High,Suspicious,CID19586-Out-of-bounds access
+210,19464,02/13/24,Critical,Other,XAnimProceduralBonesAllocator_DestroyHandle,High,Suspicious,CID19464-Out-of-bounds access
+211,19457,02/13/24,Critical,Other,Live_CheckIfShouldStartAutoLogin,High,Suspicious,CID19457-String not null terminated
+212,19389,02/13/24,Critical,Other,MatrixInverse44Safe,High,Suspicious,CID19389-Out-of-bounds write
+213,19309,02/13/24,Critical,Other,Glass_AreaX2AndScaledCentroidForEdgeLoop,High,Suspicious,CID19309-Out-of-bounds read
+214,19188,02/13/24,Critical,Other,WaterDynamics_LoadInstances,Medium,Suspicious,CID19188-Incorrect sizeof expression
+215,19167,02/13/24,Critical,Other,DB_BinaryPatch_BeginLoad,High,Suspicious,CID19167-Out-of-bounds read
+216,19036,02/13/24,Critical,Other,G_Combat_RadiusEffectsEnt,High,Suspicious,CID19036-Out-of-bounds access
+217,19026,02/13/24,Critical,Other,Add,High,Suspicious,CID19026-Out-of-bounds read
+218,18878,02/13/24,Critical,Other,PartyHost_AssignSquad,High,Suspicious,CID18878-Out-of-bounds read
+219,18411,02/13/24,Critical,Other,CheckMessageProfanityComplete,High,Suspicious,CID18411-String not null terminated
+220,18162,02/13/24,Critical,Other,CG_FrontEndScene_UpdateRequiredTransients,High,Suspicious,CID18162-Out-of-bounds access
+221,17900,02/13/24,Critical,Other,R_Water_Tile_SubmitMeshPatches,High,Suspicious,CID17900-Out-of-bounds access
+222,17856,02/13/24,Critical,Other,BG_MatchRulesHistory_WriteRecipeAsync,High,Suspicious,CID17856-Buffer not null terminated
+223,17768,02/13/24,Critical,Other,GetChannelSlot,High,Suspicious,CID17768-Illegal address computation
+224,17615,02/13/24,Critical,Other,R_AMD_CreateDevice,High,Suspicious,CID17615-Out-of-bounds read
+225,17518,02/13/24,Critical,Other,Sys_InitPhysicalDiskSectorSize,Medium,Suspicious,CID17518-Untrusted loop bound
+226,17430,02/13/24,Critical,Other,MapVoxelizedState_ReadChanges,High,Suspicious,CID17430-Out-of-bounds access
+227,17172,02/13/24,Critical,Other,GetLocalPlayer,High,Suspicious,CID17172-Out-of-bounds access
+228,16915,02/13/24,Critical,Other,RecordAdvanceOnEnemy,High,Suspicious,CID16915-Out-of-bounds read
+229,16908,02/13/24,Critical,Other,R_AdditionalCullingObjectWeather,High,Suspicious,CID16908-Out-of-bounds read
+230,16881,02/13/24,Critical,Other,SD_AD_ThreadFunc,High,Suspicious,CID16881-Out-of-bounds read
+231,16811,02/13/24,Critical,Other,AddElement,High,Suspicious,CID16811-Out-of-bounds write
+232,16769,02/13/24,Critical,Other,XAnimProceduralBonesAllocator_GetInstance,High,Suspicious,CID16769-Out-of-bounds access
+233,16765,02/13/24,Critical,Other,TreadBoneAnimCreate,High,Suspicious,CID16765-Out-of-bounds write
+234,16452,02/13/24,Critical,Other,SD_AD_ThreadFunc,High,Suspicious,CID16452-Out-of-bounds read
+235,16182,02/13/24,Critical,Other,R_SystemsShutdown,High,Suspicious,CID16182-Out-of-bounds read
+236,16160,02/13/24,Critical,Other,GetElementById,High,Suspicious,CID16160-Out-of-bounds access
+237,16046,02/13/24,Critical,Other,CL_UIStreaming_UpdateClientRequestCount,High,Suspicious,CID16046-Out-of-bounds access
+238,15837,02/13/24,Critical,Other,Mem_Paged_AddPageUnmapToBatchContext,High,Suspicious,CID15837-Out-of-bounds write
+239,15812,02/13/24,Critical,Other,SD_AD_TerminateThread,High,Suspicious,CID15812-Out-of-bounds access
+240,15626,02/13/24,Critical,Other,GameSwitchOffhandPullbackEvent,Medium,Suspicious,CID15626-Untrusted value as argument
+241,15518,02/13/24,Critical,Other,R_ST_IterateLayerMask,High,Suspicious,CID15518-Out-of-bounds access
+242,15496,02/13/24,Critical,Other,Command_MaxPageCount,High,Suspicious,CID15496-Out-of-bounds read
+243,15143,02/13/24,Critical,Other,DB_BinaryPatch_BeginLoad,High,Suspicious,CID15143-Out-of-bounds read
+244,15131,02/13/24,Critical,Other,XAnimProceduralBonesAllocator_AllocateInstance,High,Suspicious,CID15131-Out-of-bounds access
+245,15101,02/13/24,Critical,Other,AddElement,High,Suspicious,CID15101-Out-of-bounds write
+246,15071,02/13/24,Critical,Other,LoadDynamicPathNodeDeclarationFile,Low,Suspicious,CID15071-Copy into fixed size buffer
+247,15037,02/13/24,Critical,Other,AddFriendCallback,High,Suspicious,CID15037-Out-of-bounds access
+248,14957,02/13/24,Critical,Other,G_Objectives_GetObjectiveIndexFromPSIndex,High,Suspicious,CID14957-Out-of-bounds read
+249,14739,02/13/24,Critical,Other,WaterDynamics_WriteInstances,Medium,Suspicious,CID14739-Incorrect sizeof expression
+250,14712,02/13/24,Critical,Other,CG_SnapshotMP_UpdateScore,High,Suspicious,CID14712-Out-of-bounds read

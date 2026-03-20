@@ -19,6 +19,8 @@ Analysis Pipeline Algorithm:
 
 from pathlib import Path, PurePosixPath
 import csv
+import io
+import logging
 import re
 import json
 import time
@@ -47,19 +49,24 @@ class IssueAnalyzer:
     and forwards them to an LLM (via llm_analyzer) for triage.
     """
 
-    def __init__(self, lang: str = "c", config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, lang: str = "c", config: Optional[Dict[str, Any]] = None, prompt_file: Optional[str] = None, exact_only: bool = True) -> None:
         """
         Initialize the IssueAnalyzer with default parameters.
 
         Args:
             lang (str, optional): The language code. Defaults to 'c'.
             config (Dict, optional): Full LLM configuration dictionary. If not provided, loads from .env file.
+            prompt_file (str, optional): System messages YAML filename to use
+                (e.g. "system_messages.v12-verify-claims.yaml"). Defaults to "system_messages.yaml".
+            exact_only (bool, optional): If True, get_class uses exact matching only (no fuzzy fallback). Defaults to True.
         """
         self.lang = lang
         self.db_path: Optional[str] = None
         self.code_path: Optional[str] = None
         self.code_path_in_csv_row: Optional[str] = None
         self.config = config
+        self.prompt_file = prompt_file
+        self.exact_only = exact_only
 
     # ----------------------------------------------------------------------
     # 1. CSV Parsing and Data Gathering
@@ -676,6 +683,9 @@ class IssueAnalyzer:
 
             # Log issue status
             logger.info("Issue ID: %s, LLM decision: → %s", issue_id, status)
+            logger.info("")
+            logger.info("LLM Final Answer:\n%s", content)
+            logger.info("")
 
             # Track per-finding stats for run summary
             finding_stats['cid'] = issue.get('name', str(issue_id))
@@ -719,7 +729,19 @@ class IssueAnalyzer:
         if self.config is None:
            validate_and_exit_on_error()
         
-        llm_analyzer = LLMAnalyzer()
+        # Capture console output for inclusion in summary JSON
+        log_capture_stream = io.StringIO()
+        log_capture_handler = logging.StreamHandler(log_capture_stream)
+        log_capture_handler.setLevel(logging.INFO)
+        log_capture_handler.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))
+        logging.getLogger().addHandler(log_capture_handler)
+
+        prompt_loader = None
+        if self.prompt_file:
+            from src.utils.prompt_loader import PromptLoader
+            prompt_loader = PromptLoader(system_messages_file=self.prompt_file)
+            logger.info("Using prompt file: %s", self.prompt_file)
+        llm_analyzer = LLMAnalyzer(prompt_loader=prompt_loader, exact_only=self.exact_only)
         llm_analyzer.init_llm_client(config=self.config)
 
         # Gather issues from all DBs
@@ -749,10 +771,20 @@ class IssueAnalyzer:
         total_all_tokens = sum(s.get('total_tokens', 0) for s in run_stats)
         total_cost = sum(s.get('estimated_cost_usd', 0) for s in run_stats)
 
+        # LOC aggregation
+        total_initial_loc = sum(s.get('loc', {}).get('initial', 0) for s in run_stats)
+        total_tool_loc = sum(s.get('loc', {}).get('tool_total', 0) for s in run_stats)
+        total_loc = sum(s.get('loc', {}).get('total', 0) for s in run_stats)
+        total_tool_calls_for_loc = sum(s.get('tool_calls', 0) for s in run_stats)
+        avg_loc_per_tool = round(total_tool_loc / total_tool_calls_for_loc, 1) if total_tool_calls_for_loc else 0
+
+        prompt_file_used = llm_analyzer.prompt_loader.system_messages_file
         summary = {
             "run_timestamp": datetime.now(timezone.utc).isoformat(),
             "model": getattr(llm_analyzer, 'model', None),
             "provider": (llm_analyzer.config or {}).get("provider", "unknown"),
+            "prompt_file": prompt_file_used,
+            "exact_only": self.exact_only,
             "language": self.lang,
             "dbs_dir": dbs_dir,
             "findings_processed": len(run_stats),
@@ -765,19 +797,52 @@ class IssueAnalyzer:
                 "total_tokens": total_all_tokens,
                 "estimated_cost_usd": round(total_cost, 4),
                 "run_duration_seconds": round(run_duration, 2),
+                "loc": {
+                    "initial": total_initial_loc,
+                    "tool_total": total_tool_loc,
+                    "total": total_loc,
+                    "avg_per_tool_call": avg_loc_per_tool,
+                },
             },
             "averages_per_finding": {
                 "prompt_tokens": total_prompt_tokens // len(run_stats) if run_stats else 0,
                 "completion_tokens": total_completion_tokens // len(run_stats) if run_stats else 0,
                 "total_tokens": total_all_tokens // len(run_stats) if run_stats else 0,
                 "estimated_cost_usd": round(total_cost / len(run_stats), 4) if run_stats else 0,
+                "loc": {
+                    "initial": total_initial_loc // len(run_stats) if run_stats else 0,
+                    "tool_total": total_tool_loc // len(run_stats) if run_stats else 0,
+                    "total": total_loc // len(run_stats) if run_stats else 0,
+                    "avg_per_tool_call": avg_loc_per_tool,
+                },
             },
             "findings": run_stats
         }
 
+        # Capture console output and add to summary
+        logging.getLogger().removeHandler(log_capture_handler)
+        summary["console_output"] = log_capture_stream.getvalue()
+        log_capture_stream.close()
+
         summary_path = Path("output/results") / self.lang / "run_summary.json"
         self.ensure_directories_exist([str(summary_path.parent)])
-        write_file_ascii(str(summary_path), json.dumps(summary, indent=2, ensure_ascii=False))
+        summary_json = json.dumps(summary, indent=2, ensure_ascii=False)
+        write_file_ascii(str(summary_path), summary_json)
+
+        # Also save run_summary into each CID output folder with matching {id}_summary.json naming
+        for finding in run_stats:
+            cid = finding.get('cid', '')
+            if cid:
+                cid_folder = Path("output/results") / self.lang / str(cid)
+                if cid_folder.exists():
+                    # Find the highest existing ID in this folder to match naming
+                    existing = sorted(cid_folder.glob("*_final.json"))
+                    if existing:
+                        latest_id = existing[-1].stem.replace("_final", "")
+                        per_cid_summary = cid_folder / f"{latest_id}_summary.json"
+                        write_file_ascii(str(per_cid_summary), summary_json)
+                        logger.info("Per-CID summary written to %s", per_cid_summary)
+
         logger.info("=" * 80)
         logger.info("RUN SUMMARY written to %s", summary_path)
         logger.info("Findings: %d | TP: %d | FP: %d | More Data: %d", len(run_stats), tp_count, fp_count, md_count)

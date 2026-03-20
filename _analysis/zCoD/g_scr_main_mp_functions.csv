@@ -1,0 +1,12 @@
+function_name,file,start_line,end_line,caller_id
+# No functions found for g_scr_main_mp.cpp in FunctionTree database
+# Issues exist at lines 9863, 9889, 10140 but no containing functions were detected
+# This suggests the issues are in:
+#   - Global scope code (not within function boundaries)
+#   - Code not captured by CodeQL function analysis
+#   - Areas outside detected function boundaries
+#
+# Issues in this file:
+# CID29685 - Out-of-bounds access at line 9863
+# CID29654 - Out-of-bounds access at line 9889  
+# CID29316 - Out-of-bounds access at line 10140

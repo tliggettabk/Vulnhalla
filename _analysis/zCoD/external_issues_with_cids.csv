@@ -1,0 +1,251 @@
+name,help,type,message,file,start_line,start_offset,end_line,end_offset
+CID29728-Out-of-bounds read,29728 Suspicious,OVERRUN,Out-of-bounds read,/code/src/vfx/Particles/ParticleEmitter.cpp,8142,0,8142,0
+CID29720-Out-of-bounds read,29720 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/bgame/asm/bg_player_asm_animation.cpp,Various,0,Various,0
+CID29717-Out-of-bounds access,29717 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/bgame/asm/bg_player_asm_animation.cpp,Various,0,Various,0
+CID29716-Out-of-bounds write,29716 Suspicious,OVERRUN,Out-of-bounds write,/code/src/database/db_patchmem.cpp,Various,0,Various,0
+CID29710-Out-of-bounds access,29710 Suspicious,OVERRUN,Out-of-bounds access,/code/src/lui/LUI_CoD_Functions.cpp,7055,0,7055,0
+CID29696-Out-of-bounds access,29696 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game/ai/ai_pool.h,Various,0,Various,0
+CID29689-Buffer not null terminated,29689 Suspicious,BUFFER_SIZE,Buffer not null terminated,/code/src/game_iw9/bgame/bg_equipment_snd.cpp,451,0,451,0
+CID29686-Out-of-bounds read,29686 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/playerspawn/playerspawn_frontline.cpp,Various,0,Various,0
+CID29685-Out-of-bounds access,29685 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_mp/g_scr_main_mp.cpp,9863,0,9863,0
+CID29684-Out-of-bounds access,29684 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/bgame/bg_animset_util.cpp,2639,0,2639,0
+CID29683-Out-of-bounds write,29683 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_universe.cpp,Various,0,Various,0
+CID29681-Buffer not null terminated,29681 Suspicious,BUFFER_SIZE,Buffer not null terminated,/code/src/game_iw9/bgame/bg_equipment_snd.cpp,436,0,436,0
+CID29675-Out-of-bounds read,29675 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_shared/cgame/common_item/cg_common_item.cpp,Various,0,Various,0
+CID29673-Out-of-bounds access,29673 Suspicious,OVERRUN,Out-of-bounds access,/code/src/gfx/r_water.cpp,Various,0,Various,0
+CID29672-Out-of-bounds write,29672 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_iw9/playerspawn/playerspawn_frontline.cpp,228,0,228,0
+CID29669-Out-of-bounds access,29669 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game/ai/bots/ai_bot_navigation.cpp,1556,0,1556,0
+CID29668-Out-of-bounds read,29668 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/game/ai/bots/ai_bot_api.cpp,Various,0,Various,0
+CID29657-Out-of-bounds write,29657 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_iw9/playerspawn/playerspawn_selection.cpp,Various,0,Various,0
+CID29654-Out-of-bounds access,29654 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_mp/g_scr_main_mp.cpp,9889,0,9889,0
+CID29652-Out-of-bounds access,29652 Suspicious,OVERRUN,Out-of-bounds access,/code/src/lui/LUI_Render.cpp,1632,0,1632,0
+CID29651-Out-of-bounds access,29651 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/bgame/bg_player_collision.cpp,Various,0,Various,0
+CID29643-Out-of-bounds read,29643 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/cgame_mp/cg_corpse_snapshot_mp.cpp,757,0,757,0
+CID29637-Out-of-bounds access,29637 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/bgame/bg_animset_util.cpp,2697,0,2697,0
+CID29634-Out-of-bounds access,29634 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/bgame/bg_animset_util.cpp,2585,0,2585,0
+CID29633-Out-of-bounds access,29633 Suspicious,OVERRUN,Out-of-bounds access,/code/src/client/import_settings_internal.cpp,287,0,287,0
+CID29628-Out-of-bounds read,29628 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/game/ai/ai_civilian_reaction_manager.cpp,64,0,64,0
+CID29622-Out-of-bounds access,29622 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/bgame/bg_customization_mp.cpp,1411,0,1411,0
+CID29621-Out-of-bounds access,29621 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame_mp/cg_servercmds_mp.cpp,Various,0,Various,0
+CID29620-Out-of-bounds read,29620 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/game/ai/ai_civilian_reaction_manager.cpp,52,0,52,0
+CID29619-Out-of-bounds write,29619 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_nlg_atlas.cpp,3315,0,3315,0
+CID29617-Out-of-bounds read,29617 Suspicious,OVERRUN,Out-of-bounds read,/code/src/gfx/r_nlg_atlas.cpp,3334,0,3334,0
+CID29615-Out-of-bounds write,29615 Suspicious,OVERRUN,Out-of-bounds write,/code/src/xanim/xanim.cpp,20431,0,20431,0
+CID29613-Untrusted pointer write,29613 Suspicious,TAINTED_SCALAR,Untrusted pointer write,/code/src/peripherals/streamdeck/streamdeck.cpp,248,0,248,0
+CID29587-Out-of-bounds read,29587 Suspicious,OVERRUN,Out-of-bounds read,/code/src/qcommon/com_gsp_partition.cpp,2828,0,2828,0
+CID29586-Out-of-bounds read,29586 Suspicious,OVERRUN,Out-of-bounds read,/code/src/dw/dwEnvironment.cpp,793,0,793,0
+CID29582-Out-of-bounds access,29582 Suspicious,OVERRUN,Out-of-bounds access,/code/src/client/cl_player_data.cpp,145,0,145,0
+CID29580-Illegal address computation,29580 Suspicious,OVERRUN,Illegal address computation,/code/src/dw/dwEnvironment.cpp,675,0,675,0
+CID29579-Out-of-bounds read,29579 Suspicious,OVERRUN,Out-of-bounds read,/code/src/qcommon/com_gsp_partition.cpp,2745,0,2745,0
+CID29578-Out-of-bounds read,29578 Suspicious,OVERRUN,Out-of-bounds read,/code/src/dw/dwEnvironment.cpp,735,0,735,0
+CID29577-Out-of-bounds read,29577 Suspicious,OVERRUN,Out-of-bounds read,/code/src/qcommon/com_gsp_partition.cpp,2784,0,2784,0
+CID29576-Out-of-bounds access,29576 Suspicious,OVERRUN,Out-of-bounds access,/code/src/lui/LUI_CoD_PlayerData.cpp,Various,0,Various,0
+CID29553-Out-of-bounds write,29553 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_taskgraph_compile.cpp,1422,0,1422,0
+CID29552-Out-of-bounds write,29552 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_lightmap_atlas.cpp,2518,0,2518,0
+CID29548-Out-of-bounds read,29548 Suspicious,OVERRUN,Out-of-bounds read,/code/src/gfx/r_lightgrid_volumes_atlas.cpp,Various,0,Various,0
+CID29545-Buffer not null terminated,29545 Suspicious,BUFFER_SIZE,Buffer not null terminated,/code/src/online/creator/online_creator_dw.cpp,145,0,145,0
+CID29544-Out-of-bounds access,29544 Suspicious,OVERRUN,Out-of-bounds access,/code/src/stream/stream_update.cpp,Various,0,Various,0
+CID29543-Out-of-bounds write,29543 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_lightgrid_volumes_atlas.cpp,2140,0,2140,0
+CID29540-Out-of-bounds access,29540 Suspicious,OVERRUN,Out-of-bounds access,/code/src/gfx/r_lightgrid_volumes_atlas.cpp,Various,0,Various,0
+CID29532-Out-of-bounds write,29532 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_secondary_lighting.cpp,Various,0,Various,0
+CID29508-Out-of-bounds write,29508 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_secondary_lighting.cpp,Various,0,Various,0
+CID29467-Out-of-bounds access,29467 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/online_userprofiles/online_userprofiles_ddlutils.cpp,Various,0,Various,0
+CID29462-Out-of-bounds access,29462 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame_mp/cg_weapons_mp.cpp,Various,0,Various,0
+CID29457-Out-of-bounds access,29457 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game/ai/ai_civilian_manager.cpp,772,0,772,0
+CID29455-Out-of-bounds access,29455 Suspicious,OVERRUN,Out-of-bounds access,/code/src/gfx/r_material_pso.cpp,4029,0,4029,0
+CID29453-Out-of-bounds access,29453 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/bgame/bg_execution_util.cpp,2640,0,2640,0
+CID29427-Out-of-bounds access,29427 Suspicious,OVERRUN,Out-of-bounds access,/code/src/client/cl_transients_visibility.cpp,75,0,75,0
+CID29420-Out-of-bounds access,29420 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game/ai/ai_civilian_manager.cpp,706,0,706,0
+CID29415-Out-of-bounds access,29415 Suspicious,OVERRUN,Out-of-bounds access,/code/src/client/cl_transients_visibility.cpp,88,0,88,0
+CID29412-Out-of-bounds access,29412 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/notifications/online_notification_service.cpp,270,0,270,0
+CID29407-Out-of-bounds access,29407 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/notifications/online_notification_service.cpp,257,0,257,0
+CID29406-Out-of-bounds access,29406 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame/cg_world_streaming.cpp,869,0,869,0
+CID29397-Out-of-bounds access,29397 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/keybinds.cpp,Various,0,Various,0
+CID29391-Out-of-bounds access,29391 Suspicious,OVERRUN,Out-of-bounds access,/code/common/libs/fracture/fracture/half_edge_clipper.cpp,37,0,37,0
+CID29390-Out-of-bounds access,29390 Suspicious,OVERRUN,Out-of-bounds access,/code/common/libs/MathCore/MathCore/math_ops.cpp,Various,0,Various,0
+CID29388-Out-of-bounds access,29388 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/keybinds.cpp,404,0,404,0
+CID29386-Out-of-bounds access,29386 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/keybinds.cpp,295,0,295,0
+CID29376-Out-of-bounds read,29376 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/game/g_targets.cpp,Various,0,Various,0
+CID29333-Out-of-bounds read,29333 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/bgame/bg_scr_main.cpp,7371,0,7371,0
+CID29318-Out-of-bounds access,29318 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game/g_scr_weapon.cpp,3785,0,3785,0
+CID29316-Out-of-bounds access,29316 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_mp/g_scr_main_mp.cpp,10140,0,10140,0
+CID29305-Out-of-bounds access,29305 Suspicious,OVERRUN,Out-of-bounds access,/code/src/script/scr_readwrite.cpp,1324,0,1324,0
+CID29193-Out-of-bounds write,29193 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_nlg_atlas.cpp,1135,0,1135,0
+CID29190-Out-of-bounds write,29190 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/rb_data_copier.cpp,1157,0,1157,0
+CID29171-Out-of-bounds access,29171 Suspicious,OVERRUN,Out-of-bounds access,/code/src/database/db_zones.cpp,2004,0,2004,0
+CID29160-Out-of-bounds write,29160 Suspicious,OVERRUN,Out-of-bounds write,/code/src/database/db_zones.cpp,1959,0,1959,0
+CID29137-Out-of-bounds access,29137 Suspicious,OVERRUN,Out-of-bounds access,/code/src/physics/Private/Core/PhysicsRT_Ref.cpp,Various,0,Various,0
+CID29134-Out-of-bounds write,29134 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_taskgraph_compile_barriers.cpp.h,898,0,898,0
+CID29043-Out-of-bounds read,29043 Suspicious,OVERRUN,Out-of-bounds read,/code/src/mapVoxelizedState/MapVoxelizedState_RingBufferReceive.cpp,Various,0,Various,0
+CID29030-Out-of-bounds read,29030 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_shared/game/common_item/g_common_item.cpp,366,0,366,0
+CID29025-Out-of-bounds read,29025 Suspicious,OVERRUN,Out-of-bounds read,/code/src/dynentity/DynEntity_spatial.cpp,Various,0,Various,0
+CID27771-Out-of-bounds read,27771 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/bgame/asm/bg_player_asm_util.cpp,3235,0,3235,0
+CID27732-Out-of-bounds access,27732 Suspicious,OVERRUN,Out-of-bounds access,/code/src/dlog/dlog_bindings.cpp,92,0,92,0
+CID27550-Out-of-bounds read,27550 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/bgame/asm/bg_player_asm_util.cpp,3344,0,3344,0
+CID27541-Out-of-bounds access,27541 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics_manager.inl,Various,0,Various,0
+CID27485-Out-of-bounds write,27485 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_iw9/game/ai/ai_interaction_manager.cpp,246,0,246,0
+CID27427-Out-of-bounds access,27427 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/bgame/lwagent/pathtimeline/bg_pathtimeline.cpp,192,0,192,0
+CID27425-Out-of-bounds read,27425 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_shared/bgame/bg_ai.cpp,218,0,218,0
+CID27415-Out-of-bounds read,27415 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/cgame/cg_client_character.cpp,2458,0,2458,0
+CID27396-Out-of-bounds access,27396 Suspicious,OVERRUN,Out-of-bounds access,/code/src/gfx/r_amd_ffx_security.h,98,0,98,0
+CID27392-Out-of-bounds read,27392 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_shared/bgame/common_item/bg_common_item.cpp,796,0,796,0
+CID27377-Out-of-bounds access,27377 Suspicious,OVERRUN,Out-of-bounds access,/code/src/weather/weather_griddynamic.cpp,428,0,428,0
+CID27376-Out-of-bounds access,27376 Suspicious,OVERRUN,Out-of-bounds access,/code/src/weather/weather_griddynamic.cpp,369,0,369,0
+CID27360-Out-of-bounds read,27360 Suspicious,OVERRUN,Out-of-bounds read,/code/src/db_zlib/db_inftrees.cpp,Various,0,Various,0
+CID27300-Out-of-bounds read,27300 Suspicious,OVERRUN,Out-of-bounds read,/code/src/db_zlib/db_inftrees.cpp,195,0,195,0
+CID27244-Out-of-bounds read,27244 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/cgame/cg_pose.cpp,Various,0,Various,0
+CID27190-Out-of-bounds write,27190 Suspicious,OVERRUN,Out-of-bounds write,/code/common/libs/fracture/fracture/half_edge_clipper.cpp,36,0,36,0
+CID27182-Out-of-bounds write,27182 Suspicious,OVERRUN,Out-of-bounds write,/code/src/weather/weather_griddynamic_streamer_tile.inl,Various,0,Various,0
+CID27174-Out-of-bounds read,27174 Suspicious,OVERRUN,Out-of-bounds read,/code/src/weather/weather_griddynamic_streamer_tile.inl,Various,0,Various,0
+CID27097-Out-of-bounds read,27097 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/cgame/cg_hang.cpp,Various,0,Various,0
+CID27094-Out-of-bounds read,27094 Suspicious,OVERRUN,Out-of-bounds read,/code/src/database/db_binarypatch_load.cpp,501,0,501,0
+CID27093-Out-of-bounds read,27093 Suspicious,OVERRUN,Out-of-bounds read,/code/src/database/db_binarypatch_load.cpp,505,0,505,0
+CID27064-Out-of-bounds access,27064 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game/g_objectives.cpp,4534,0,4534,0
+CID27060-Out-of-bounds access,27060 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_sp/g_pip_sp.cpp,1145,0,1145,0
+CID27059-Out-of-bounds write,27059 Suspicious,OVERRUN,Out-of-bounds write,/code/src/database/db_zones.cpp,1710,0,1710,0
+CID27056-Out-of-bounds read,27056 Suspicious,OVERRUN,Out-of-bounds read,/code/src/universal/atvi_stb_image.cpp,Various,0,Various,0
+CID27055-Out-of-bounds read,27055 Suspicious,OVERRUN,Out-of-bounds read,/code/src/universal/atvi_stb_image.cpp,5538,0,5538,0
+CID27054-Out-of-bounds read,27054 Suspicious,OVERRUN,Out-of-bounds read,/code/src/PatchCollision/PatchCollision_AreaSwap.cpp,440,0,440,0
+CID27046-Out-of-bounds write,27046 Suspicious,OVERRUN,Out-of-bounds write,/code/src/qcommon/com_player_data_objectstore.cpp,188,0,188,0
+CID27044-Out-of-bounds write,27044 Suspicious,OVERRUN,Out-of-bounds write,/code/src/netconststrings/NetConstStrings_dvar.cpp,196,0,196,0
+CID27043-Out-of-bounds write,27043 Suspicious,OVERRUN,Out-of-bounds write,/code/src/database/db_zones.cpp,345,0,345,0
+CID27036-Out-of-bounds access,27036 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_sp/g_moving_platforms_sp.cpp,80,0,80,0
+CID27034-Out-of-bounds read,27034 Suspicious,OVERRUN,Out-of-bounds read,/code/src/database/db_zones.cpp,383,0,383,0
+CID27031-Out-of-bounds read,27031 Suspicious,OVERRUN,Out-of-bounds read,/code/src/universal/atvi_stb_image.cpp,Various,0,Various,0
+CID27029-Out-of-bounds write,27029 Suspicious,OVERRUN,Out-of-bounds write,/code/src/database/db_zones.cpp,1723,0,1723,0
+CID27025-Out-of-bounds read,27025 Suspicious,OVERRUN,Out-of-bounds read,/code/src/universal/atvi_stb_image.cpp,5548,0,5548,0
+CID27016-Buffer not null terminated,27016 Suspicious,BUFFER_SIZE,Buffer not null terminated,/code/src/online/online_archive_replay_playback.cpp,1412,0,1412,0
+CID26847-Out-of-bounds access,26847 Suspicious,OVERRUN,Out-of-bounds access,/code/src/gfx/r_enumerate.cpp,1740,0,1740,0
+CID26822-Illegal address computation,26822 Suspicious,OVERRUN,Illegal address computation,/code/src/lui/LUI_CoD_Functions.cpp,5723,0,5723,0
+CID26803-Out-of-bounds read,26803 Suspicious,OVERRUN,Out-of-bounds read,/code/src/qcommon/com_storage.cpp,1640,0,1640,0
+CID26790-Out-of-bounds access,26790 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/com_storage.cpp,1692,0,1692,0
+CID26768-Out-of-bounds access,26768 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/com_player_data.cpp,316,0,316,0
+CID26759-Out-of-bounds write,26759 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_shared/cgame/ClientModel/CG_ClientModel.cpp,5127,0,5127,0
+CID26671-Out-of-bounds access,26671 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/online_userprofiles/online_userprofiles_manager.cpp,377,0,377,0
+CID26580-Out-of-bounds access,26580 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/net_packet.cpp,214,0,214,0
+CID26523-Out-of-bounds access,26523 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/com_player_data.cpp,310,0,310,0
+CID26475-Out-of-bounds read,26475 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_shared/bgame/vehicles/bg_vehicle_leanout.cpp,1518,0,1518,0
+CID26379-Out-of-bounds write,26379 Suspicious,OVERRUN,Out-of-bounds write,/code/src/dynentity/DynEntity_client.cpp,2366,0,2366,0
+CID26324-Out-of-bounds read,26324 Suspicious,OVERRUN,Out-of-bounds read,/code/src/lui/LUI_CoD_Functions.cpp,5757,0,5757,0
+CID26318-Out-of-bounds access,26318 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/online_userprofiles/online_userprofiles_ddlutils.cpp,Various,0,Various,0
+CID26311-Out-of-bounds access,26311 Suspicious,OVERRUN,Out-of-bounds access,/code/src/client/cl_player_data.cpp,Various,0,Various,0
+CID26284-Illegal address computation,26284 Suspicious,OVERRUN,Illegal address computation,/code/src/qcommon/net_dtls.cpp,227,0,227,0
+CID26280-Out-of-bounds write,26280 Suspicious,OVERRUN,Out-of-bounds write,/code/src/gfx/r_font.cpp,2965,0,2965,0
+CID26273-Out-of-bounds access,26273 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/com_storage.cpp,1620,0,1620,0
+CID26235-Out-of-bounds access,26235 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/com_player_data.cpp,322,0,322,0
+CID26124-Out-of-bounds access,26124 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame_sp/cg_servercmds_sp.cpp,897,0,897,0
+CID26045-Copy into fixed size buffer,26045 Suspicious,STRING_OVERFLOW,Copy into fixed size buffer,/code/src/online/online_instance_inventory_common.cpp,79,0,79,0
+CID26034-Out-of-bounds access,26034 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics_manager.inl,139,0,139,0
+CID25987-Out-of-bounds access,25987 Suspicious,OVERRUN,Out-of-bounds access,/code/src/WaterDynamics/WaterDynamics_PhysicsBehavior.cpp,989,0,989,0
+CID25764-Out-of-bounds access,25764 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame/cg_utils.cpp,1168,0,1168,0
+CID25720-Out-of-bounds write,25720 Suspicious,OVERRUN,Out-of-bounds write,/code/src/online/online_archive_replay_playback.cpp,652,0,652,0
+CID25520-Untrusted value as argument,25520 Suspicious,TAINTED_SCALAR,Untrusted value as argument,/code/src/server_mp/sv_snapshot_workers_mp.cpp,Various,0,Various,0
+CID25502-Out-of-bounds access,25502 Suspicious,OVERRUN,Out-of-bounds access,/code/src/dynentity/DynEntity_spatial.cpp,633,0,633,0
+CID25352-Out-of-bounds write,25352 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_shared/bgame/common_item/bg_common_item.cpp,Various,0,Various,0
+CID25232-Out-of-bounds write,25232 Suspicious,OVERRUN,Out-of-bounds write,/code/libs/ddl/src/ddl/ddl_parse.cpp,386,0,386,0
+CID25193-Out-of-bounds read,25193 Suspicious,OVERRUN,Out-of-bounds read,/code/libs/ddl/src/ddl/ddl_parse.cpp,199,0,199,0
+CID25110-Buffer not null terminated,25110 Suspicious,BUFFER_SIZE,Buffer not null terminated,/code/src/game_iw9/cgame/cg_client_character.cpp,Various,0,Various,0
+CID25077-Out-of-bounds access,25077 Suspicious,OVERRUN,Out-of-bounds access,/code/src/client_mp/cl_parse_mp.cpp,888,0,888,0
+CID24998-Copy into fixed size buffer,24998 Suspicious,STRING_OVERFLOW,Copy into fixed size buffer,/code/src/online/online_friends_crossplay.cpp,1846,0,1846,0
+CID24714-Out-of-bounds access,24714 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/player_socialdata/player_socialdata_system.inl,Various,0,Various,0
+CID24664-Copy into fixed size buffer,24664 Suspicious,STRING_OVERFLOW,Copy into fixed size buffer,/code/src/online/online_archive_replay_playback.cpp,4252,0,4252,0
+CID24600-Out-of-bounds access,24600 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame/cg_weapons.cpp,Various,0,Various,0
+CID24579-Illegal address computation,24579 Suspicious,OVERRUN,Illegal address computation,/code/src/stream/stream_defrag.cpp,4759,0,4759,0
+CID24548-Out-of-bounds access,24548 Suspicious,OVERRUN,Out-of-bounds access,/code/src/xanim/xanim.cpp,Various,0,Various,0
+CID24422-Out-of-bounds access,24422 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_sp/g_save_sp.cpp,1718,0,1718,0
+CID24293-Out-of-bounds read,24293 Suspicious,OVERRUN,Out-of-bounds read,/code/src/xanim/dobj.cpp,7288,0,7288,0
+CID24077-Out-of-bounds access,24077 Suspicious,OVERRUN,Out-of-bounds access,/code/src/physics/Private/Core/PhysicsRT_Vehicle.cpp,Various,0,Various,0
+CID24015-Out-of-bounds write,24015 Suspicious,OVERRUN,Out-of-bounds write,/code/src/PatchCollision/PatchCollision_AreaSwap.cpp,163,0,163,0
+CID23977-Out-of-bounds access,23977 Suspicious,OVERRUN,Out-of-bounds access,/code/src/universal/edge_octree.h,Various,0,Various,0
+CID23844-Destination buffer too small,23844 Suspicious,STRING_OVERFLOW,Destination buffer too small,/code/src/universal/info_parse_util.cpp,550,0,550,0
+CID23609-Untrusted value as argument,23609 Suspicious,TAINTED_SCALAR,Untrusted value as argument,/code/src/server_mp/sv_snapshot_mp.cpp,Various,0,Various,0
+CID23599-Out-of-bounds access,23599 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_sp/g_save_sp.cpp,1655,0,1655,0
+CID23530-Out-of-bounds access,23530 Suspicious,OVERRUN,Out-of-bounds access,/code/src/WaterDynamics/WaterDynamics_Physics.cpp,218,0,218,0
+CID23524-Out-of-bounds access,23524 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_sp/g_save_sp.cpp,1736,0,1736,0
+CID23091-Out-of-bounds read,23091 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/bgame/asm/bg_player_asm_util.cpp,3292,0,3292,0
+CID23029-Out-of-bounds access,23029 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/bg_emote.cpp,958,0,958,0
+CID22919-Out-of-bounds access,22919 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/player_socialdata/player_socialdata_system.inl,Various,0,Various,0
+CID22888-Out-of-bounds access,22888 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics.cpp,4553,0,4553,0
+CID22871-Out-of-bounds access,22871 Suspicious,OVERRUN,Out-of-bounds access,/code/src/WaterDynamics/WaterDynamics_Physics.cpp,207,0,207,0
+CID22860-Out-of-bounds access,22860 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics.cpp,4535,0,4535,0
+CID22792-Out-of-bounds read,22792 Suspicious,OVERRUN,Out-of-bounds read,/code/src/snd/sd_mix_voice.cpp,Various,0,Various,0
+CID22768-Out-of-bounds write,22768 Suspicious,OVERRUN,Out-of-bounds write,/code/src/PatchCollision/PatchCollision_AreaSwap.cpp,221,0,221,0
+CID22709-Out-of-bounds access,22709 Suspicious,OVERRUN,Out-of-bounds access,/code/src/physics/Private/Core/PhysicsRT_Ref.cpp,537,0,537,0
+CID22665-Out-of-bounds access,22665 Suspicious,OVERRUN,Out-of-bounds access,/code/src/dw/dwLobbyEventHandler.h,Various,0,Various,0
+CID22641-Out-of-bounds read,22641 Suspicious,OVERRUN,Out-of-bounds read,/code/src/gfx/r_scene.cpp,Various,0,Various,0
+CID22543-Out-of-bounds read,22543 Suspicious,OVERRUN,Out-of-bounds read,/code/src/gfx/r_scene.cpp,12039,0,12039,0
+CID22455-Out-of-bounds access,22455 Suspicious,OVERRUN,Out-of-bounds access,/code/src/lui/LUI_CustomElement_Anchored.cpp,572,0,572,0
+CID22395-Out-of-bounds access,22395 Suspicious,OVERRUN,Out-of-bounds access,/code/src/qcommon/net_thread.cpp,Various,0,Various,0
+CID22357-Out-of-bounds access,22357 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame/cg_weapons.cpp,5457,0,5457,0
+CID22183-Untrusted value as argument,22183 Suspicious,TAINTED_SCALAR,Untrusted value as argument,/code/src/server_mp/sv_snapshot_mp.cpp,4811,0,4811,0
+CID22177-Out-of-bounds access,22177 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game_sp/g_turret_sp.cpp,76,0,76,0
+CID22167-Out-of-bounds access,22167 Suspicious,OVERRUN,Out-of-bounds access,/code/src/stream/stream_defrag.cpp,Various,0,Various,0
+CID22145-Out-of-bounds write,22145 Suspicious,OVERRUN,Out-of-bounds write,/code/src/online/online_dcqos.cpp,431,0,431,0
+CID22143-Out-of-bounds write,22143 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_shared/bgame/common_item/bg_common_item.cpp,1107,0,1107,0
+CID22081-Out-of-bounds access,22081 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/player_socialdata/player_socialdata_system.inl,Various,0,Various,0
+CID21953-Out-of-bounds access,21953 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics_manager.inl,Various,0,Various,0
+CID21764-Out-of-bounds access,21764 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/player_socialdata/player_socialdata_system.inl,Various,0,Various,0
+CID21670-Out-of-bounds access,21670 Suspicious,OVERRUN,Out-of-bounds access,/code/src/physics/Private/Core/PhysicsRT_Vehicle.cpp,Various,0,Various,0
+CID21656-Out-of-bounds read,21656 Suspicious,OVERRUN,Out-of-bounds read,/code/src/PatchCollision/PatchCollision_AreaSwap.cpp,440,0,440,0
+CID21563-Out-of-bounds access,21563 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/player_socialdata/player_socialdata_system_presence.cpp,Various,0,Various,0
+CID21524-Illegal address computation,21524 Suspicious,OVERRUN,Illegal address computation,/code/src/game_iw9/game/ai/ai_behavior_sequencer.cpp,3545,0,3545,0
+CID21162-Out-of-bounds access,21162 Suspicious,OVERRUN,Out-of-bounds access,/code/src/dw/dwLobbyEventHandler.h,Various,0,Various,0
+CID21106-Out-of-bounds read,21106 Suspicious,OVERRUN,Out-of-bounds read,/code/src/universal/memfile.cpp,854,0,854,0
+CID21051-Untrusted value as argument,21051 Suspicious,TAINTED_SCALAR,Untrusted value as argument,/code/src/game_iw9/game_mp/g_player_events_mp.cpp,1417,0,1417,0
+CID21030-Out-of-bounds access,21030 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics_manager.inl,Various,0,Various,0
+CID21024-Out-of-bounds write,21024 Suspicious,OVERRUN,Out-of-bounds write,/code/src/vfx/Particles/ParticleManager.h,351,0,351,0
+CID20851-Out-of-bounds access,20851 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame/cg_hang.cpp,2141,0,2141,0
+CID20836-Out-of-bounds read,20836 Suspicious,OVERRUN,Out-of-bounds read,/code/src/xanim/xanim_trace.cpp,364,0,364,0
+CID20833-Out-of-bounds write,20833 Suspicious,OVERRUN,Out-of-bounds write,/code/src/qcommon/com_fastfile_zonelist.h,80,0,80,0
+CID20815-Out-of-bounds access,20815 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics_manager.inl,Various,0,Various,0
+CID20802-Out-of-bounds read,20802 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/game/ai/bots/ai_bot.cpp,4567,0,4567,0
+CID20613-Out-of-bounds access,20613 Suspicious,OVERRUN,Out-of-bounds access,/code/src/dw/dwLobbyEventHandler.h,Various,0,Various,0
+CID20212-Out-of-bounds access,20212 Suspicious,OVERRUN,Out-of-bounds access,/code/src/WaterDynamics/WaterDynamics_PhysicsBehavior.cpp,1809,0,1809,0
+CID20102-Out-of-bounds write,20102 Suspicious,OVERRUN,Out-of-bounds write,/code/src/online/online_archive_replay_playback.cpp,624,0,624,0
+CID19775-Out-of-bounds read,19775 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics_helicopter.cpp,Various,0,Various,0
+CID19771-Copy into fixed size buffer,19771 Suspicious,STRING_OVERFLOW,Copy into fixed size buffer,/code/src/qcommon/com_storage.cpp,3335,0,3335,0
+CID19751-Out-of-bounds read,19751 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/bgame/bg_animstate.cpp,150,0,150,0
+CID19748-Out-of-bounds read,19748 Suspicious,OVERRUN,Out-of-bounds read,/code/src/online/online_archive_replay_playback.cpp,623,0,623,0
+CID19644-Out-of-bounds read,19644 Suspicious,OVERRUN,Out-of-bounds read,/code/src/dw/dwEnvironment.cpp,823,0,823,0
+CID19586-Out-of-bounds access,19586 Suspicious,OVERRUN,Out-of-bounds access,/code/src/snd/sd_output_libad.cpp,1706,0,1706,0
+CID19464-Out-of-bounds access,19464 Suspicious,OVERRUN,Out-of-bounds access,/code/src/xanim/proceduralbones/proceduralbones_allocator.cpp,Various,0,Various,0
+CID19457-String not null terminated,19457 Suspicious,STRING_NULL,String not null terminated,/code/src/online/live_common.cpp,Various,0,Various,0
+CID19389-Out-of-bounds write,19389 Suspicious,OVERRUN,Out-of-bounds write,/code/common/libs/MathCore/MathCore/math_ops.cpp,7766,0,7766,0
+CID19309-Out-of-bounds read,19309 Suspicious,OVERRUN,Out-of-bounds read,/code/common/libs/GlassCore/GlassCore/glass_crack_shard.cpp,Various,0,Various,0
+CID19188-Incorrect sizeof expression,19188 Suspicious,BAD_SIZEOF,Incorrect sizeof expression,/code/src/WaterDynamics/WaterDynamics.cpp,526,0,526,0
+CID19167-Out-of-bounds read,19167 Suspicious,OVERRUN,Out-of-bounds read,/code/src/database/db_binarypatch_load.cpp,579,0,579,0
+CID19036-Out-of-bounds access,19036 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/game/g_combat.cpp,Various,0,Various,0
+CID19026-Out-of-bounds read,19026 Suspicious,OVERRUN,Out-of-bounds read,/code/src/qcommon/com_fastfile_zonelist.h,164,0,164,0
+CID18878-Out-of-bounds read,18878 Suspicious,OVERRUN,Out-of-bounds read,/code/src/client_mp/partyhost.cpp,Various,0,Various,0
+CID18411-String not null terminated,18411 Suspicious,STRING_NULL,String not null terminated,/code/src/online/online_friends_crossplay.cpp,1845,0,1845,0
+CID18162-Out-of-bounds access,18162 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_iw9/cgame/cg_frontend_scene.cpp,Various,0,Various,0
+CID17900-Out-of-bounds access,17900 Suspicious,OVERRUN,Out-of-bounds access,/code/src/gfx/r_water.cpp,8106,0,8106,0
+CID17856-Buffer not null terminated,17856 Suspicious,BUFFER_SIZE,Buffer not null terminated,/code/src/game_iw9/bgame/bg_matchrules_history.cpp,1440,0,1440,0
+CID17768-Illegal address computation,17768 Suspicious,OVERRUN,Illegal address computation,/code/src/qcommon/net_endpoint.cpp,615,0,615,0
+CID17615-Out-of-bounds read,17615 Suspicious,OVERRUN,Out-of-bounds read,/code/src/gfx/r_amd.cpp,Various,0,Various,0
+CID17518-Untrusted loop bound,17518 Suspicious,TAINTED_SCALAR,Untrusted loop bound,/code/src/win32/win_main.cpp,467,0,467,0
+CID17430-Out-of-bounds access,17430 Suspicious,OVERRUN,Out-of-bounds access,/code/src/mapVoxelizedState/MapVoxelizedState.cpp,823,0,823,0
+CID17172-Out-of-bounds access,17172 Suspicious,OVERRUN,Out-of-bounds access,/code/src/ecs_common/ecs_client_centity.cpp,134,0,134,0
+CID16915-Out-of-bounds read,16915 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/game/ai/ai_scripted_coordinator.cpp,3236,0,3236,0
+CID16908-Out-of-bounds read,16908 Suspicious,OVERRUN,Out-of-bounds read,/code/src/gfx/r_dpvs.cpp,1031,0,1031,0
+CID16881-Out-of-bounds read,16881 Suspicious,OVERRUN,Out-of-bounds read,/code/src/snd/sd_output_libad.cpp,1674,0,1674,0
+CID16811-Out-of-bounds write,16811 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_shared/bgame/vehicles/bg_vehicle_elm_collection.inl,25,0,25,0
+CID16769-Out-of-bounds access,16769 Suspicious,OVERRUN,Out-of-bounds access,/code/src/xanim/proceduralbones/proceduralbones_allocator.cpp,715,0,715,0
+CID16765-Out-of-bounds write,16765 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_shared/cgame/vehicles/cg_vehicle_treads.cpp,228,0,228,0
+CID16452-Out-of-bounds read,16452 Suspicious,OVERRUN,Out-of-bounds read,/code/src/snd/sd_output_libad.cpp,1675,0,1675,0
+CID16182-Out-of-bounds read,16182 Suspicious,OVERRUN,Out-of-bounds read,/code/src/gfx/r_init.cpp,1750,0,1750,0
+CID16160-Out-of-bounds access,16160 Suspicious,OVERRUN,Out-of-bounds access,/code/src/game_shared/bgame/vehicles/bg_vehicle_physics_manager.inl,Various,0,Various,0
+CID16046-Out-of-bounds access,16046 Suspicious,OVERRUN,Out-of-bounds access,/code/src/client/cl_ui_streaming.cpp,2000,0,2000,0
+CID15837-Out-of-bounds write,15837 Suspicious,OVERRUN,Out-of-bounds write,/code/src/memory/mem_paged.cpp,4174,0,4174,0
+CID15812-Out-of-bounds access,15812 Suspicious,OVERRUN,Out-of-bounds access,/code/src/snd/sd_output_libad.cpp,1717,0,1717,0
+CID15626-Untrusted value as argument,15626 Suspicious,TAINTED_SCALAR,Untrusted value as argument,/code/src/game_iw9/game_mp/g_player_events_mp.cpp,1428,0,1428,0
+CID15518-Out-of-bounds access,15518 Suspicious,OVERRUN,Out-of-bounds access,/code/common/libs/SuperTerrainCore/SuperTerrainCore/SuperTerrainDefines.h,221,0,221,0
+CID15496-Out-of-bounds read,15496 Suspicious,OVERRUN,Out-of-bounds read,/code/src/stream/stream_defrag.cpp,978,0,978,0
+CID15143-Out-of-bounds read,15143 Suspicious,OVERRUN,Out-of-bounds read,/code/src/database/db_binarypatch_load.cpp,577,0,577,0
+CID15131-Out-of-bounds access,15131 Suspicious,OVERRUN,Out-of-bounds access,/code/src/xanim/proceduralbones/proceduralbones_allocator.cpp,Various,0,Various,0
+CID15101-Out-of-bounds write,15101 Suspicious,OVERRUN,Out-of-bounds write,/code/src/game_shared/bgame/vehicles/bg_vehicle_elm_collection.inl,25,0,25,0
+CID15071-Copy into fixed size buffer,15071 Suspicious,STRING_OVERFLOW,Copy into fixed size buffer,/code/src/los_precompute/los_precompute_system.cpp,169,0,169,0
+CID15037-Out-of-bounds access,15037 Suspicious,OVERRUN,Out-of-bounds access,/code/src/online/online_friends_crossplay.cpp,954,0,954,0
+CID14957-Out-of-bounds read,14957 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/game/g_objectives.cpp,841,0,841,0
+CID14739-Incorrect sizeof expression,14739 Suspicious,BAD_SIZEOF,Incorrect sizeof expression,/code/src/WaterDynamics/WaterDynamics.cpp,498,0,498,0
+CID14712-Out-of-bounds read,14712 Suspicious,OVERRUN,Out-of-bounds read,/code/src/game_iw9/cgame_mp/cg_snapshot_mp.cpp,4979,0,4979,0

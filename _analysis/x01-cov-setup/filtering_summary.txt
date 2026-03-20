@@ -1,0 +1,8 @@
+
+Filtering Summary:
+- Input file: C:\tmp\cntnr_test\findings-metadata\Findings Data All Time_backup_20251103141207.xlsx
+- Output file: Findings Data All Time_backup_20251103141207_UniqueCID_Production_Only.xlsx
+- Original rows: 4,134
+- Filtered rows: 1,631
+- Rows removed: 2,503
+- Filter conditions: uniqueCID == True AND '1. ABK_Code_Type' == 'Production'

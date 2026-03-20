@@ -271,16 +271,19 @@ class CodeQLDBLookup:
         self,
         curr_db: str,
         class_name: str,
-        less_strict: bool = False
+        less_strict: bool = False,
+        exact_only: bool = False
     ) -> Union[str, Dict[str, str]]:
         """
         Return class info (type, class_name, file, start_line, end_line, simple_name)
-        from Classes.csv for class_name. If not found, tries partial match if less_strict is True.
+        from Classes.csv for class_name. If not found, tries partial match unless exact_only is True.
 
         Args:
             curr_db (str): Path to current CodeQL database folder.
             class_name (str): The name of the class/struct/union to find.
             less_strict (bool, optional): If True, use partial matching.
+            exact_only (bool, optional): If True, never fall back to partial matching.
+                Returns 'not found' instead of a fuzzy/closest match.
 
         Returns:
             Union[str, Dict[str, str]]:
@@ -292,7 +295,9 @@ class CodeQLDBLookup:
         """
         classes_file = Path(curr_db) / "Classes.csv"
         keys = ["type", "class_name", "file", "start_line", "end_line", "simple_name"]
-        class_name_only = class_name.split("::")[-1]
+        class_name_only = class_name.strip().rstrip(":").split("::")[-1].strip()
+        if not class_name_only:
+            return f"Class '{class_name}' is not a valid class name."
 
         for row in self._iter_csv_lines(classes_file, "Classes CSV"):
             if class_name_only in row:
@@ -305,13 +310,13 @@ class CodeQLDBLookup:
                 if (
                     actual_class == class_name_only
                     or simple_class == class_name_only
-                    or (less_strict and class_name_only in actual_class)
-                    or (less_strict and class_name_only in simple_class)
+                    or (less_strict and not exact_only and class_name_only in actual_class)
+                    or (less_strict and not exact_only and class_name_only in simple_class)
                 ):
                     return row_dict
 
-        if not less_strict:
-            return self.get_class(curr_db, class_name, True)
+        if not less_strict and not exact_only:
+            return self.get_class(curr_db, class_name, True, exact_only)
         else:
             return f"Class '{class_name}' not found. Could it be a Namespace?"
 
@@ -383,6 +388,8 @@ class CodeQLDBLookup:
         src_zip = Path(db_path) / "src.zip"
         file_path = current_function["file"].replace("\"", "")[1:]
         file_path = file_path.replace(":","D_")  # Normalize path separators - fixed to match actual ZIP structure
+        if not file_path.strip():
+            raise CodeQLError(f"Empty file path in function record: {current_function}")
         #logger.debug(f"@@@4Extracting function lines: file_path='{file_path}', start_line={current_function['start_line']}, end_line={current_function['end_line']}")
         code_file = read_file_lines_from_zip(str(src_zip), file_path)
         lines = code_file.split("\n")

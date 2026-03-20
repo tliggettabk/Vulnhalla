@@ -1,0 +1,107 @@
+# Tool definitions exposed to the LLM for function-calling.
+# Each entry maps directly to an OpenAI-compatible tool schema.
+
+- name: get_function_code
+  description: >-
+    Retrieves function implementation (source code) anywhere in the program.
+    Focus on edge cases, error conditions, and return values that might affect security.
+    Pay special attention to what functions return when inputs are invalid or edge cases occur.
+  parameters:
+    type: object
+    properties:
+      function_name:
+        type: string
+        description: >-
+          The name of the function to retrieve. In case of a class
+          method, provide ClassName::MethodName.
+      context:
+        type: string
+        description: >-
+          NEW FACTS: Key evidence discovered from the latest tool result only (system tracks the full list).
+          SUFFICIENCY: MECHANISM [yes/no], GUARDS [yes/no], EXPLOITABILITY [yes/no].
+          WHY THIS CALL: Which criterion is still NO and what this call resolves.
+          If all three are YES, do NOT call — give your verdict instead.
+    required:
+      - function_name
+      - context
+
+- name: get_caller_function
+  description: >-
+    Retrieves the caller function of the function with the issue.
+    Call it repeatedly to climb further up the call chain.
+  parameters:
+    type: object
+    properties:
+      context:
+        type: string
+        description: >-
+          NEW FACTS: Key evidence discovered from the latest tool result only (system tracks the full list).
+          SUFFICIENCY: MECHANISM [yes/no], GUARDS [yes/no], EXPLOITABILITY [yes/no].
+          WHY THIS CALL: Which criterion is still NO and what this call resolves.
+          If all three are YES, do NOT call — give your verdict instead.
+    required:
+      - context
+
+- name: get_class
+  description: >-
+    Retrieves class / struct / union implementation (anywhere in code).
+    Pay attention to member variables, access controls, and potential security implications.
+    If you need a specific method from that class, use get_function_code instead.
+  parameters:
+    type: object
+    properties:
+      object_name:
+        type: string
+        description: "The name of the class / struct / union."
+      context:
+        type: string
+        description: >-
+          NEW FACTS: Key evidence discovered from the latest tool result only (system tracks the full list).
+          SUFFICIENCY: MECHANISM [yes/no], GUARDS [yes/no], EXPLOITABILITY [yes/no].
+          WHY THIS CALL: Which criterion is still NO and what this call resolves.
+          If all three are YES, do NOT call — give your verdict instead.
+    required:
+      - object_name
+      - context
+
+- name: get_global_var
+  description: >-
+    Retrieves global variable definition (anywhere in code).
+    If it's a variable inside a class, request the class instead.
+  parameters:
+    type: object
+    properties:
+      global_var_name:
+        type: string
+        description: >-
+          The name of the global variable to retrieve or the name
+          of a variable inside a Namespace.
+      context:
+        type: string
+        description: >-
+          NEW FACTS: Key evidence discovered from the latest tool result only (system tracks the full list).
+          SUFFICIENCY: MECHANISM [yes/no], GUARDS [yes/no], EXPLOITABILITY [yes/no].
+          WHY THIS CALL: Which criterion is still NO and what this call resolves.
+          If all three are YES, do NOT call — give your verdict instead.
+    required:
+      - global_var_name
+      - context
+
+- name: get_macro
+  description: "Retrieves a macro definition (anywhere in code)."
+  parameters:
+    type: object
+    properties:
+      macro_name:
+        type: string
+        description: "The name of the macro."
+      context:
+        type: string
+        description: >-
+          NEW FACTS: Key evidence discovered from the latest tool result only (system tracks the full list).
+          SUFFICIENCY: MECHANISM [yes/no], GUARDS [yes/no], EXPLOITABILITY [yes/no].
+          WHY THIS CALL: Which criterion is still NO and what this call resolves.
+          If all three are YES, do NOT call — give your verdict instead.
+    required:
+      - macro_name
+      - context

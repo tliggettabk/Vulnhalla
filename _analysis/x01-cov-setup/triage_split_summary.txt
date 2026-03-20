@@ -1,0 +1,9 @@
+
+Triage Comment Split Summary:
+- Input file: Findings_UniqueCID_Production_WithCodeLine.xlsx
+- Output file (blank/no alpha): Findings_WithCodeLine_BlankTriageComment.xlsx
+- Output file (with alpha): Findings_WithCodeLine_WithTriageComment.xlsx
+- Original rows: 1,627
+- Blank/No alpha rows: 744
+- With alpha rows: 883
+- Split criteria: presence of alphabetic characters in Last Triage Comment

@@ -1,0 +1,134 @@
+examples\example.py
+
+from src.pipeline import analyze_pipeline
+
+step2_run_codeql_queries(dbs_dir, lang, threads)
+    outputs?
+        compile_and_run_codeql_queries
+            for curr_db in actual_dbs:
+                run_queries_on_db(
+                        run_one_query
+                            subprocess.run(
+                [
+                    codeql_bin,
+                    "database",
+                    "analyze",
+                    curr_db,
+                    queries_folder,
+                    f'--timeout={timeout}',
+                    '--format=csv',
+                    f'--output={str(Path(curr_db) / "issues.csv")}',
+                    f'--threads={threads}'
+                ],
+The FunctionTree.csv file is created by running the CodeQL query data/queries/cpp/tools/FunctionTree.ql 
+as part of the script src/codeql/run_codeql_queries.py. 
+This script executes all .ql files in the tools folder for each CodeQL database, 
+and the output of FunctionTree.ql is written as FunctionTree.csv in the corresponding database directory.
+
+codeql query run "data/queries/cpp/tools/FunctionTree.ql" `
+  --database="C:\tmp\codeql-dbs\cpp-db" `
+  --output="C:\tmp\codeql-dbs\cpp-db\FunctionTree.bqrs" `
+  --ram=24576
+
+codeql bqrs decode "C:\tmp\codeql-dbs\cpp-db\FunctionTree.bqrs" `
+  --format=csv `
+  --output="C:\tmp\codeql-dbs\cpp-db\FunctionTree.csv"
+-----------------------------------------------
+codeql query run "data/queries/cpp/tools/FunctionTree.ql" `
+  --database="C:\tmp\codeql-dbs\simple-cpp-db" `
+  --output="C:\tmp\codeql-dbs\simple-cpp-db\FunctionTree.bqrs" `
+  --ram=24576
+
+codeql bqrs decode "C:\tmp\codeql-dbs\simple-cpp-db\FunctionTree.bqrs" `
+  --format=csv `
+  --output="C:\tmp\codeql-dbs\simple-cpp-db\FunctionTree.csv"
+----------------------------------------------
+codeql query run "data/queries/cpp/tools/FunctionTree.ql" `
+  --database="C:\code\codeQL_CoD\codeql\results\vulnhalla-cpp" `
+  --output="C:\code\codeQL_CoD\codeql\results\vulnhalla-cpp\FunctionTree.bqrs" `
+  --ram=24576 --rerun
+
+codeql bqrs decode "C:\code\codeQL_CoD\codeql\results\vulnhalla-cpp\FunctionTree.bqrs" `
+  --format=csv `
+  --output="C:\code\codeQL_CoD\codeql\results\vulnhalla-cpp\FunctionTree.csv"
+
+===============================
+/**
+ * @name Function Tree with Caller Info
+ * @description Lists functions with their location and the caller function (if any).
+ * @kind problem
+ * @id cpp/tools/function-tree-with-caller
+ * @tags cpp, visualization
+ */
+===============================
+--database=C:\tmp\codeql-dbs\cpp-db
+codeql database analyze "C:\tmp\codeql-dbs\cpp-db" "data/queries/cpp/tools/FunctionTree.ql" `
+  --format=csv `
+  --output="C:\tmp\codeql-dbs\cpp-db\FunctionTree.csv" --ram=24576
+
+codeql database analyze "C:\code\codeQL_CoD\codeql" "data/queries/cpp/tools/FunctionTree.ql" `
+  --format=csv `
+  --output="C:\code\codeQL_CoD\result111s.csv" --ram=24576
+
+"C:\code\codeQL_CoD\codeql\results\vulnhalla-cpp\FunctionTree.bqrs"
+
+
+codeql bqrs interpret `
+  "C:\code\codeQL_CoD\codeql\results\vulnhalla-cpp\FunctionTree.bqrs" `
+  --format=csv `
+  --output="C:\code\codeQL_CoD\codeql\results\vulnhalla-cpp\FunctionTree.csv" `
+  -t=function_name=function_name `
+  -t=file=file `
+  -t=start_line=start_line `
+  -t=function_id=function_id `
+  -t=end_line=end_line `
+  -t=caller_id=caller_id
+
+
+
+  CodeQL can only use what your system has available.
+A safe rule: allocate 50–75% of your total physical RAM to CodeQL.
+
+Example:
+
+If you have 16 GB RAM, give CodeQL 8–12 GB (--ram=8192 or --ram=12288).
+If you have 32 GB RAM, you can go up to 24 GB (--ram=24576).
+***************************************************************************
+step3_classify_results_with_llm(dbs_dir, lang)
+
+src\vulnhalla.py
+
+py -m src.vulnhalla
+***************************************************************************
+***************************************************************************
+C:\Users\tliggett\.codeql\compile-cache - delete everything if you want the rule to rebuld.
+
+codeql query run "data/queries/cpp/tools/FunctionTree.ql" `
+--database="C:\tmp\codeql-dbs\f20260212" `
+--output="C:\tmp\codeql-dbs\f20260212\FunctionTree.bqrs" `
+--ram=24576
+
+@2
+codeql bqrs decode "C:\tmp\codeql-dbs\f20260212\FunctionTree.bqrs" `
+  --format=csv `
+  --output="C:\tmp\codeql-dbs\f20260212\FunctionTree.csv"
+
+@3
+src\vulnhalla.py
+change tracedb = r"C:\tmp\codeql-dbs\f20260212" 
+
+py -m src.vulnhalla
+
+************************************************************
+************************************************************
+@1-----------------------------------------------
+you need to have already run a rule on C:\tmp\codeql-dbs\f20260212
+and written them to "C:\tmp\codeql-dbs\f20260212\issues.csv"
+codeql database create C:\tmp\codeql-dbs\f20260212 --language=cpp --command="g++ -c f20260212.cpp" --overwrite
+
+codeql database analyze "C:\tmp\codeql-dbs\f20260212" "C:\tmp\CQL\codeql-win64\codeql\qlpacks\codeql\cpp-queries\1.5.7\OutOfBoundsShort2.ql" --format=csv --output="C:\tmp\codeql-dbs\f20260212\issues.csv"
+
+@2-----------------------------------------------
+delete "C:\tmp\codeql-dbs\f20260212\FunctionTree.csv" if you want those files recreated
+delete output\results if you don't want stuff from prior runs displayed in the UI at the end.
+py -m src.pipeline "C:\tmp\codeql-dbs\f20260212"  

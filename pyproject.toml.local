@@ -1,0 +1,9 @@
+[project]
+name = "Vulnhalla"
+version = "0.1.0"
+description = "Minimal project metadata for Vulnhalla."
+authors = [
+    { "name" = "Your Name", "email" = "your.email@example.com" }
+]
+
+dependencies = []

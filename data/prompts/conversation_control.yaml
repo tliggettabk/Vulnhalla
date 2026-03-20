@@ -1,0 +1,51 @@
+# Conversation-control messages injected during the LLM analysis loop.
+# These are short strings used at specific points in the conversation flow.
+
+# Injected when the LLM replies without a recognized status code
+retry_nudge: "Please follow all the instructions!"
+
+# Injected when the LLM exceeds the tool-call limit
+tool_limit_warning: >-
+  You have used many tool calls. Review the ESTABLISHED EVIDENCE above and
+  your SUFFICIENCY criteria. If MECHANISM, GUARDS, and EXPLOITABILITY are
+  all resolved, give your verdict NOW. Only request more data (status 7331)
+  if a critical criterion is genuinely unresolvable with the tools available.
+
+# Prepended to caller function code when returned by get_caller_function
+caller_function_preamble: "Here is the caller function for '{function_name}':"
+
+# Appended when get_class returns a fuzzy (non-exact) match
+fuzzy_class_note: >-
+  [NOTE: Exact match for '{requested_name}' was not found.
+  The above is the closest match ('{actual_name}').
+  '{requested_name}' may be a typedef or template alias.
+  Do NOT retry get_class with the same name — the result will be identical.
+  Instead, try get_global_var to find the typedef definition,
+  or work with the information you already have.]
+
+# Prompt sent to the LLM for caller/callee variable mapping
+map_func_args_prompt: |-
+  Given caller function and callee function.
+  Write only what are the names of the vars in the caller that were sent to the callee and what are their names in the callee.
+  Format: caller_var (caller_name) -> callee_var (callee_name)
+
+  Caller function:
+  {caller}
+  Callee function:
+  {callee}
+
+# Message for invalid/unrecognized tool calls
+invalid_tool_message: "No matching tool '{tool_name}' or invalid args {tool_args}. Try again."
+
+# Status codes that signal the LLM has reached a conclusion
+status_codes:
+  - "1337"
+  - "1007"
+  - "7331"
+  - "7337"
+  - "7337-LEAN-VULN"
+  - "7337-LEAN-SECURE"
+  - "3713"
+
+# Maximum number of tool-call rounds before forcing a final answer
+max_tool_calls: 30

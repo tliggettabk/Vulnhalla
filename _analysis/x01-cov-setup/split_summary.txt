@@ -1,0 +1,9 @@
+
+Split Summary:
+- Input file: Findings Data All Time_backup_20251103141207_UniqueCID_Production_Only.xlsx
+- Output file (blank/no alpha): Findings_UniqueCID_Production_BlankCodeLine.xlsx
+- Output file (with alpha): Findings_UniqueCID_Production_WithCodeLine.xlsx
+- Original rows: 1,631
+- Blank/No alpha rows: 4
+- With alpha rows: 1,627
+- Split criteria: presence of alphabetic characters in code_at_cited_line

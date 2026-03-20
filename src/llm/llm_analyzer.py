@@ -10,14 +10,22 @@ All logic is now wrapped in the `LLMAnalyzer` class for improved organization.
 from datetime import datetime  # noqa: F401 - kept for potential future use
 import os
 import json
+import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import warnings
 import litellm
+
+# Suppress Pydantic serializer warnings from LiteLLM (Azure returns fields like
+# image_tokens that don't match LiteLLM's ResponseAPIUsage model — harmless).
+warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
+
 from src.utils.llm_config import load_llm_config, get_model_name
 from src.utils.config_validator import validate_llm_config_dict
 from src.utils.logger import get_logger
-from src.utils.exceptions import LLMApiError, LLMConfigError
+from src.utils.exceptions import CodeQLError, LLMApiError, LLMConfigError
+from src.utils.prompt_loader import PromptLoader
 from src.codeql.db_lookup import CodeQLDBLookup
 
 logger = get_logger(__name__)
@@ -29,6 +37,107 @@ class LLMAnalyzer:
     can query missing code snippets (via 'tools'), compile a conversation
     with system instructions, and ultimately produce a status code.
     """
+
+    # ------------------------------------------------------------------ #
+    #  v19 evidence-extraction constants                                  #
+    # ------------------------------------------------------------------ #
+    _META_STATUS_PHRASES: frozenset = frozenset({
+        "none yet", "n/a", "none", "nothing learned",
+        "no new facts", "nothing new", "no additional facts",
+        "previous call returned class not found",
+    })
+    _SECTION_BLEED_MARKERS: tuple = (
+        "SUFFICIENCY:", "WHY THIS CALL", "MECHANISM [", "GUARDS [", "EXPLOITABILITY [",
+    )
+
+    # ------------------------------------------------------------------ #
+    #  v19 evidence helpers                                               #
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _find_section_positions(text: str) -> Dict[str, int]:
+        """Return start-positions of known section headers in *text*."""
+        positions: Dict[str, int] = {}
+        for header in ("NEW FACTS", "KNOWN FACTS", "SUFFICIENCY", "WHY THIS CALL"):
+            idx = text.upper().find(header.upper())
+            if idx != -1:
+                positions[header] = idx
+        return positions
+
+    def _extract_evidence_from_context(
+        self,
+        context_text: str,
+        established_evidence: List[str],
+        sufficiency_state: Dict[str, bool],
+    ) -> None:
+        """Parse *context_text* for NEW FACTS and SUFFICIENCY updates.
+
+        Mutates *established_evidence* (appends) and *sufficiency_state*
+        (flips to True, never back to False).  Designed to be robust
+        against missing newlines, section bleed, and meta-status junk.
+        """
+        if not context_text:
+            return
+
+        # -- 1. Locate section boundaries --------------------------------
+        positions = self._find_section_positions(context_text)
+
+        facts_key = None
+        for key in ("NEW FACTS", "KNOWN FACTS"):
+            if key in positions:
+                facts_key = key
+                break
+
+        # -- 2. Slice out the facts block --------------------------------
+        if facts_key is not None:
+            start = positions[facts_key]
+            # Skip past the header + any colon/whitespace
+            header_end = start + len(facts_key)
+            if header_end < len(context_text) and context_text[header_end] in (':', ' '):
+                header_end += 1
+            # End = next section header that comes AFTER our header
+            ordered = sorted(
+                ((k, v) for k, v in positions.items() if k != facts_key and v > start),
+                key=lambda kv: kv[1],
+            )
+            end = ordered[0][1] if ordered else len(context_text)
+            facts_block = context_text[header_end:end].strip()
+        else:
+            facts_block = ""
+
+        # -- 3. Split into individual fact lines -------------------------
+        if facts_block:
+            lines = re.split(r'\n\s*(?:\d+\.\s*|-\s*)', facts_block)
+            # The first element may be unsplit if block didn't start with "1."
+            if lines and lines[0].strip():
+                first = lines[0].strip()
+                # Handle case where first line has no number prefix
+                lines[0] = first
+            for raw_line in lines:
+                line = raw_line.strip().rstrip('.')
+                if not line or len(line) <= 5:
+                    continue
+
+                # -- 3a. Reject meta-status phrases (short only) ---------
+                if len(line) < 40 and line.lower() in self._META_STATUS_PHRASES:
+                    logger.debug(f"  ~SKIP meta-status: {line!r}")
+                    continue
+
+                # -- 3b. Reject section-bleed remnants (any length) ------
+                if any(marker in line for marker in self._SECTION_BLEED_MARKERS):
+                    logger.debug(f"  ~SKIP section bleed: {line[:80]!r}")
+                    continue
+
+                # -- 3c. De-duplicate and append -------------------------
+                if not any(line.lower() == ex.lower() for ex in established_evidence):
+                    established_evidence.append(line)
+                    logger.info(f"  +EVIDENCE: {line[:120]}")
+
+        # -- 4. Parse SUFFICIENCY independently --------------------------
+        for criterion in sufficiency_state:
+            if re.search(rf'{criterion}\s*\[yes\]', context_text, re.IGNORECASE):
+                if not sufficiency_state[criterion]:
+                    sufficiency_state[criterion] = True
+                    logger.info(f"  SUFFICIENCY: {criterion} flipped to YES")
 
     def dump_messages_for_audit(self, messages: Optional[list] = None, file_path: Optional[str] = None) -> None:
         """
@@ -51,13 +160,20 @@ class LLMAnalyzer:
         else:
             print(formatted, file=sys.stdout)
 
-    def __init__(self) -> None:
+    def __init__(self, prompt_loader: Optional["PromptLoader"] = None, exact_only: bool = True) -> None:
         """
         Initialize the LLMAnalyzer instance and define tools and system messages.
+
+        Args:
+            prompt_loader: Optional PromptLoader instance. If None, a default
+                           loader is created that reads from data/prompts/.
+            exact_only: If True, get_class uses exact matching only (no fuzzy fallback).
         """
         self.config: Optional[Dict[str, Any]] = None
         self.model: Optional[str] = None
+        self.exact_only = exact_only
         self.db_lookup = CodeQLDBLookup()
+        self.prompt_loader = prompt_loader or PromptLoader()
 
         # Token usage tracking (accumulated across findings)
         self._token_sums: Dict[str, int] = {
@@ -74,8 +190,8 @@ class LLMAnalyzer:
             'cost': 0.0
         }
 
-        # Tools configuration: A set of function calls the LLM can invoke
-        self.tools: List[Dict[str, Any]] = [
+        # Tools configuration: loaded from YAML, with hardcoded fallback
+        self.tools: List[Dict[str, Any]] = self.prompt_loader.load_tools() or [
             {
                 "type": "function",
                 "function": {
@@ -183,8 +299,8 @@ class LLMAnalyzer:
             }
         ]
 
-        # Base system messages with instructions and guidance for the LLM
-        self.MESSAGES: List[Dict[str, str]] = [
+        # Base system messages: loaded from YAML, with hardcoded fallback
+        self.MESSAGES: List[Dict[str, str]] = self.prompt_loader.load_system_messages() or [
             {
                 "role": "system",
                 "content": (
@@ -249,8 +365,7 @@ class LLMAnalyzer:
                     "4. If not found: Submit the call.\n\n"
                     "Additional rules:\n"
                     "- If get_macro returns 'not found', the symbol is likely an inline constexpr — use get_global_var instead.\n"
-                    "- If get_class returns a different class name than you requested, that is the closest match available. "
-                    "Do NOT retry — you will get the same result. Try get_global_var for the typedef, or work with what you have."
+                    "- If get_class returns a different class name than you requested, that is the closest match available. Do NOT retry — you will get the same result. Try get_global_var for the typedef, or work with what you have."
                 )
             },
         ]
@@ -388,19 +503,20 @@ class LLMAnalyzer:
 
         Returns:
             str: The code snippet, or an error message if no dictionary was provided.
-        
-        Raises:
-            CodeQLError: If ZIP file cannot be read or file not found in archive.
-                This exception is raised by `read_file_lines_from_zip()` and propagated here.
         """
         if not isinstance(current_function, dict):
             return str(current_function)
 
-        file_path, start_line, end_line, lines = self.db_lookup.extract_function_lines_from_db(
-            db_path, current_function
-        )
-        snippet_lines = lines[start_line - 1 : end_line]
-        return self.db_lookup.format_numbered_snippet(file_path, start_line, snippet_lines)
+        try:
+            file_path, start_line, end_line, lines = self.db_lookup.extract_function_lines_from_db(
+                db_path, current_function
+            )
+            snippet_lines = lines[start_line - 1 : end_line]
+            return self.db_lookup.format_numbered_snippet(file_path, start_line, snippet_lines)
+        except CodeQLError as e:
+            func_name = current_function.get('function_name', current_function.get('class_name', str(current_function)))
+            logger.warning("Failed to extract code for '%s': %s", func_name, e)
+            return f"Error: could not retrieve source code for '{func_name}': {e}"
 
 
     def map_func_args_by_llm(
@@ -422,16 +538,7 @@ class LLMAnalyzer:
         Raises:
             LLMApiError: If LLM API call fails (rate limits, timeouts, auth failures, etc.).
         """
-        args_prompt = (
-            "Given caller function and callee function.\n"
-            "Write only what are the names of the vars in the caller that were sent to the callee "
-            "and what are their names in the callee.\n"
-            "Format: caller_var (caller_name) -> callee_var (callee_name)\n\n"
-            "Caller function:\n"
-            f"{caller}\n"
-            "Callee function:\n"
-            f"{callee}"
-        )
+        args_prompt = self.prompt_loader.get_map_func_args_prompt(caller, callee)
 
         # Use the main model from config
         model_name = self.model if self.model else "gpt-4o"
@@ -440,7 +547,7 @@ class LLMAnalyzer:
             response = litellm.completion(
                 model=model_name,
                 messages=[{"role": "user", "content": args_prompt}],
-                timeout=120  # 2 minute timeout
+                timeout=300  # 5 minute timeout
             )
             return response.choices[0].message
         except litellm.RateLimitError as e:
@@ -463,8 +570,8 @@ class LLMAnalyzer:
         current_function: Dict[str, str],
         functions: List[Dict[str, str]],
         db_path: str,
-        temperature: float = 0.2,
-        top_p: float = 0.2
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None
     ) -> Tuple[List[Dict[str, Any]], str]:
         """
         Main loop to keep querying the LLM with the MESSAGES context plus
@@ -477,8 +584,10 @@ class LLMAnalyzer:
             current_function (Dict[str, str]): The current function dict for context.
             functions (List[Dict[str, str]]): List of function dictionaries.
             db_path (str): Path to the CodeQL DB folder.
-            temperature (float, optional): Sampling temperature. Defaults to 0.2.
-            top_p (float, optional): Nucleus sampling. Defaults to 0.2.
+            temperature (float, optional): Sampling temperature. If None, reads from
+                config (LLM_TEMPERATURE env var), defaulting to 0.2.
+            top_p (float, optional): Nucleus sampling. If None, reads from
+                config (LLM_TOP_P env var), defaulting to 0.2.
 
         Returns:
             Tuple[List[Dict[str, Any]], str, Dict[str, Any]]:
@@ -495,6 +604,12 @@ class LLMAnalyzer:
         if not self.model:
             raise RuntimeError("LLM model not initialized. Call init_llm_client() first.")
         
+        # Resolve temperature/top_p from config if not explicitly passed
+        if temperature is None:
+            temperature = float((self.config or {}).get("temperature", 0.2))
+        if top_p is None:
+            top_p = float((self.config or {}).get("top_p", 0.2))
+        
         got_answer = False
         db_path_clean = db_path.replace(" ", "")
         all_functions = functions
@@ -510,8 +625,42 @@ class LLMAnalyzer:
         self._current_finding_tokens = {'prompt': 0, 'completion': 0, 'total': 0, 'cost': 0.0}
         import time as _time
         _finding_start_time = _time.time()
+
+        # --- LOC tracking ---
+        initial_loc = prompt.count('\n') + (1 if prompt else 0)
+        tool_loc_total = 0
+        tool_loc_calls = 0  # counts only tool calls that returned code (non-empty response)
+
+        # --- v19: System-managed evidence accumulation ---
+        established_evidence: List[str] = []
+        sufficiency_state = {"MECHANISM": False, "GUARDS": False, "EXPLOITABILITY": False}
+        _EVIDENCE_MARKER = "@@ESTABLISHED_EVIDENCE@@"
+
         while not got_answer:
             round_count += 1    
+            # --- v19: Inject/update ESTABLISHED EVIDENCE system message ---
+            if round_count > 1 and established_evidence:
+                suff_str = ", ".join(
+                    f"{k} [{'yes' if v else 'no'}]"
+                    for k, v in sufficiency_state.items()
+                )
+                evidence_content = (
+                    f"{_EVIDENCE_MARKER}\n"
+                    "ESTABLISHED EVIDENCE (accumulated from prior investigation — authoritative, do not abbreviate):\n"
+                    + "\n".join(f"{i+1}. {fact}" for i, fact in enumerate(established_evidence))
+                    + f"\n\nSUFFICIENCY: {suff_str}"
+                )
+                # Replace existing evidence message or append new one
+                replaced = False
+                for i, msg in enumerate(messages):
+                    if msg.get("role") == "system" and _EVIDENCE_MARKER in (msg.get("content") or ""):
+                        messages[i] = {"role": "system", "content": evidence_content}
+                        replaced = True
+                        break
+                if not replaced:
+                    messages.append({"role": "system", "content": evidence_content})
+                logger.info(f"Injected ESTABLISHED EVIDENCE with {len(established_evidence)} facts, SUFFICIENCY: {suff_str}")
+
             # Send the current messages + tools to the LLM endpoint
             logger.info("=" * 80)
             logger.info(f"Round {round_count} started with {len(messages)} messages.")
@@ -521,7 +670,7 @@ class LLMAnalyzer:
                     "model": self.model,
                     "messages": messages,
                     "tools": self.tools,
-                    "timeout": 120  # 2 minute timeout to prevent hanging
+                    "timeout": 300  # 5 minute timeout to prevent hanging
                 }
                 
                 # Check if using Bedrock (model starts with "bedrock/" or contains "arn:aws:bedrock")
@@ -595,13 +744,13 @@ class LLMAnalyzer:
 
             if not tool_calls:
                 # Check if we have a recognized status code
-                if final_content and any(code in final_content for code in ["1337", "1007", "7331", "7337", "7337-LEAN-VULN", "7337-LEAN-SECURE", "3713"]):
+                if final_content and any(code in final_content for code in self.prompt_loader.get_status_codes()):
                     got_answer = True
                     logger.info(f"got_answer. Ending analysis.")
                 else:
                     messages.append({
                         "role": "system",
-                        "content": "Please follow all the instructions!"
+                        "content": self.prompt_loader.get_retry_nudge()
                     })
                     logger.info("!!!llm said final_content but wrong code.  Try again enforcing instructions.")
             else:
@@ -650,8 +799,8 @@ class LLMAnalyzer:
                             all_functions.append(caller_function)
                             caller_code = self.extract_function_from_file(db_path_clean, caller_function)
                             response_msg = (
-                                f"Here is the caller function for '{current_function['function_name']}':\n"
-                                + caller_code
+                                self.prompt_loader.get_caller_function_preamble(current_function['function_name'])
+                                + "\n" + caller_code
                             )
                             args_content = self.map_func_args_by_llm(
                                 caller_code,
@@ -680,33 +829,30 @@ class LLMAnalyzer:
 
                     elif tool_function_name == 'get_class' and "object_name" in tool_args:
                         requested_name = tool_args["object_name"]
-                        curr_class = self.db_lookup.get_class(db_path_clean, requested_name)
+                        curr_class = self.db_lookup.get_class(db_path_clean, requested_name, exact_only=self.exact_only)
                         if isinstance(curr_class, dict):
                             class_code = self.extract_function_from_file(db_path_clean, curr_class)
-                            # Check if this was a fuzzy match (returned class != requested class)
-                            actual_name = curr_class.get("class_name", "").replace('"', '').split("::")[-1]
-                            requested_simple = requested_name.split("::")[-1]
-                            if actual_name != requested_simple:
-                                class_code += (
-                                    f"\n\n[NOTE: Exact match for '{requested_name}' was not found. "
-                                    f"The above is the closest match ('{actual_name}'). "
-                                    f"'{requested_name}' may be a typedef or template alias. "
-                                    f"Do NOT retry get_class with the same name — the result will be identical. "
-                                    f"Instead, try get_global_var to find the typedef definition, "
-                                    f"or work with the information you already have.]"
-                                )
+                            # Check if fuzzy match returned a different class
+                            actual_name = curr_class.get('name', '')
+                            requested_simple = requested_name.split('::')[-1]
+                            if actual_name and actual_name != requested_simple:
+                                fuzzy_note = self.prompt_loader.get_fuzzy_class_note(requested_name, actual_name)
+                                class_code = fuzzy_note + class_code
                             response_msg = class_code
                         else:
                             response_msg = curr_class
 
                     else:
-                        response_msg = (
-                            f"No matching tool '{tool_function_name}' or invalid args {tool_args}. "
-                            "Try again."
-                        )
+                        response_msg = self.prompt_loader.get_invalid_tool_message(tool_function_name, tool_args)
                         logger.info(f"!!!Invalid tool call: {tool_function_name} with args {tool_args}, tell llm to try again")
 
                     #logger.info(f"Tool result at {datetime.datetime.now().isoformat()}: {response_msg[:200]}" if response_msg and len(response_msg) > 200 else f"Tool result at {datetime.datetime.now().isoformat()}: {response_msg}")
+
+                    # --- LOC tracking for tool responses ---
+                    if response_msg:
+                        resp_loc = response_msg.count('\n') + 1
+                        tool_loc_total += resp_loc
+                        tool_loc_calls += 1
 
                     messages.append({
                         "role": "tool",
@@ -717,15 +863,59 @@ class LLMAnalyzer:
                     logger.info("."*80)
                 messages += arg_messages
 
-                if amount_of_tools >= 10:
+                # --- v19: Extract NEW FACTS and SUFFICIENCY from tool call context args ---
+                for tc in tool_calls:
+                    try:
+                        tc_args = tc.function.arguments
+                        if isinstance(tc_args, str):
+                            tc_args = json.loads(tc_args)
+                        context_text = tc_args.get("context", "")
+                        self._extract_evidence_from_context(
+                            context_text, established_evidence, sufficiency_state
+                        )
+                    except (json.JSONDecodeError, AttributeError, TypeError):
+                        pass  # Malformed args — skip extraction
+
+                # --- v19: Strip old context from prior (non-latest) assistant tool_call args ---
+                # Find the index of the latest assistant message with tool_calls
+                latest_tc_idx = None
+                for i in range(len(messages) - 1, -1, -1):
+                    msg = messages[i]
+                    if msg.get("role") == "assistant" and msg.get("tool_calls"):
+                        latest_tc_idx = i
+                        break
+                # Strip context from all prior assistant tool_call messages (keep WHY THIS CALL only)
+                for i, msg in enumerate(messages):
+                    if i == latest_tc_idx:
+                        continue  # Keep the latest one intact
+                    if msg.get("role") == "assistant" and msg.get("tool_calls"):
+                        for tc_obj in msg["tool_calls"]:
+                            try:
+                                args_raw = tc_obj.function.arguments
+                                if isinstance(args_raw, str):
+                                    args_dict = json.loads(args_raw)
+                                else:
+                                    args_dict = args_raw
+                                ctx = args_dict.get("context", "")
+                                if not ctx:
+                                    continue
+                                # Keep only WHY THIS CALL section
+                                why_match = re.search(
+                                    r'(WHY THIS CALL[:\s]*.+)',
+                                    ctx, re.DOTALL | re.IGNORECASE
+                                )
+                                stripped_ctx = why_match.group(1).strip() if why_match else "[context moved to ESTABLISHED EVIDENCE]"
+                                args_dict["context"] = stripped_ctx
+                                tc_obj.function.arguments = json.dumps(args_dict)
+                            except (json.JSONDecodeError, AttributeError, TypeError):
+                                pass
+
+                if amount_of_tools >= self.prompt_loader.get_max_tool_calls():
                     messages.append({
                         "role": "system",
-                        "content": (
-                            "You called too many tools! If you still can't give a clear answer, "
-                            "return the 'more data' status."
-                        )
+                        "content": self.prompt_loader.get_tool_limit_warning()
                     })
-                    logger.info("!!Tool-call limit (10) reached. Enforcing final answer or 'more data' status.")
+                    logger.info("!!Tool-call limit (%d) reached. Enforcing final answer or 'more data' status.", self.prompt_loader.get_max_tool_calls())
 
         #logger.info(f"LLM analysis concluded at {datetime.datetime.now().isoformat()}. Final reply: {final_content[:200]}" if final_content and len(final_content) > 200 else f"LLM analysis concluded at {datetime.datetime.now().isoformat()}. Final reply: {final_content}")
         logger.info(f"LLM analysis concluded. Reason for ending: {'Status code found' if got_answer else 'Tool-call limit reached'}")
@@ -746,6 +936,8 @@ class LLMAnalyzer:
         logger.info(f"LLM token usage averages per finding: prompt={avg_prompt}, completion={avg_completion}, total={avg_total}")
 
         # Build per-finding stats dict
+        total_loc = initial_loc + tool_loc_total
+        avg_loc_per_tool = round(tool_loc_total / tool_loc_calls, 1) if tool_loc_calls else 0
         finding_stats: Dict[str, Any] = {
             'rounds': round_count,
             'tool_calls': amount_of_tools,
@@ -755,10 +947,17 @@ class LLMAnalyzer:
             'estimated_cost_usd': round(self._current_finding_tokens['cost'], 6),
             'duration_seconds': round(_finding_duration, 2),
             'model': self.model,
+            'loc': {
+                'initial': initial_loc,
+                'tool_total': tool_loc_total,
+                'total': total_loc,
+                'avg_per_tool_call': avg_loc_per_tool,
+            },
         }
         logger.info(f"Finding stats: rounds={round_count}, tool_calls={amount_of_tools}, "
                     f"tokens={self._current_finding_tokens['total']}, "
                     f"cost=${self._current_finding_tokens['cost']:.4f}, "
-                    f"duration={_finding_duration:.1f}s")
+                    f"duration={_finding_duration:.1f}s, "
+                    f"LOC: initial={initial_loc}, tool={tool_loc_total}, total={total_loc}, avg/tool={avg_loc_per_tool}")
 
         return messages, final_content, finding_stats
