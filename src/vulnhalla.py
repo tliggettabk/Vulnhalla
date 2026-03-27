@@ -49,7 +49,7 @@ class IssueAnalyzer:
     and forwards them to an LLM (via llm_analyzer) for triage.
     """
 
-    def __init__(self, lang: str = "c", config: Optional[Dict[str, Any]] = None, prompt_file: Optional[str] = None, exact_only: bool = True) -> None:
+    def __init__(self, lang: str = "c", config: Optional[Dict[str, Any]] = None, prompt_file: Optional[str] = None, exact_only: bool = True, orchestrated: bool = False, plan_file: str = "", replay_lead: str = "", replay_synthesize: bool = False, plan_only: bool = False, cid: str = "", first_cid: bool = False, last_n: int = 0, parallel_leads: bool = True, batch: str = "") -> None:
         """
         Initialize the IssueAnalyzer with default parameters.
 
@@ -59,6 +59,11 @@ class IssueAnalyzer:
             prompt_file (str, optional): System messages YAML filename to use
                 (e.g. "system_messages.v12-verify-claims.yaml"). Defaults to "system_messages.yaml".
             exact_only (bool, optional): If True, get_class uses exact matching only (no fuzzy fallback). Defaults to True.
+            orchestrated (bool, optional): If True, use Plan→Investigate→Synthesize engine instead of single-conversation. Defaults to False.
+            cid (str, optional): Comma-separated CID(s) to process (e.g. "15518" or "15518,19309"). Defaults to "" (all).
+            first_cid (bool, optional): If True, only process the first CID found in issues.csv. Defaults to False.
+            last_n (int, optional): If > 0, process only the last N issues (for error recovery). Defaults to 0 (all).
+            batch (str, optional): Batch identifier (e.g. "b3"). Uses issues-<batch>.csv instead of issues.csv. Defaults to "" (issues.csv).
         """
         self.lang = lang
         self.db_path: Optional[str] = None
@@ -67,6 +72,301 @@ class IssueAnalyzer:
         self.config = config
         self.prompt_file = prompt_file
         self.exact_only = exact_only
+        self.orchestrated = orchestrated
+        self.plan_file = plan_file
+        self.replay_lead = replay_lead
+        self.replay_synthesize = replay_synthesize
+        self.plan_only = plan_only
+        self.cid = cid
+        self.first_cid = first_cid
+        self.last_n = last_n
+        self.parallel_leads = parallel_leads
+        self.batch = batch
+        self._csv_run_tag: str = ""
+        self._human_triage: Dict[str, Dict[str, str]] = {}
+
+    # ----------------------------------------------------------------------
+    # 0. Incremental CSV Tracking (orchestrated mode)
+    # ----------------------------------------------------------------------
+
+    # Human triage Excel — hardcoded for now
+    _HUMAN_TRIAGE_XLSX = r"_analysis\x02-updateLineNums\Findings_WithCodeLine_WithTriageComment_Perfect.xlsx"
+
+    _CID_CSV_COLUMNS = [
+        "timestamp", "cid", "issue_type", "decision", "decision_code",
+        "llm_verdict",
+        "human_report", "human_triage_comment",
+        "run_folder", "leads_count", "rounds", "tool_calls", "tool_calls_found",
+        "prompt_tokens", "completion_tokens", "total_tokens",
+        "estimated_cost_usd", "duration_seconds", "llm_seconds",
+        "plan_seconds", "plan_llm_seconds",
+        "investigate_seconds", "investigate_llm_seconds",
+        "synthesize_seconds", "synthesize_llm_seconds",
+        "model",
+        "loc_initial", "loc_tool", "loc_total",
+        "total_retries", "lead_failures", "status",
+    ]
+
+    _LEAD_CSV_COLUMNS = [
+        "timestamp", "cid", "lead_id", "question", "answered", "confidence",
+        "tool_calls", "tool_calls_cached", "tool_calls_found", "follow_up_rounds",
+        "prompt_tokens", "completion_tokens", "total_tokens",
+        "estimated_cost_usd", "duration_seconds", "llm_seconds",
+        "loc_initial", "loc_tool", "loc_total", "loc_avg_per_tool",
+        "retries",
+    ]
+
+    _TOOL_CALLS_CSV_COLUMNS = [
+        "timestamp", "cid", "lead_id", "call_index", "tool",
+        "first_arg", "args", "phase", "cached", "found", "loc",
+        "duration_seconds",
+    ]
+
+    def _load_human_triage(self) -> Dict[str, Dict[str, str]]:
+        """Load human triage data from the Perfect findings Excel.
+
+        Returns a dict keyed by CID (str) with values {report, triage_comment}.
+        Silently returns empty dict if the file is missing or unreadable.
+        """
+        xlsx_path = Path(self._HUMAN_TRIAGE_XLSX)
+        if not xlsx_path.exists():
+            logger.warning("Human triage Excel not found: %s", xlsx_path)
+            return {}
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(str(xlsx_path), read_only=True, data_only=True)
+            ws = wb.active
+            headers = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+            cid_idx = headers.index("CID")
+            report_idx = headers.index("Report")
+            comment_idx = headers.index("Last Triage Comment")
+            triage: Dict[str, Dict[str, str]] = {}
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                cid_val = str(row[cid_idx]).strip() if row[cid_idx] is not None else ""
+                if cid_val:
+                    triage[cid_val] = {
+                        "report": str(row[report_idx] or "").strip(),
+                        "triage_comment": str(row[comment_idx] or "").strip(),
+                    }
+            wb.close()
+            logger.info("Loaded human triage for %d CIDs from %s", len(triage), xlsx_path)
+            return triage
+        except Exception as e:
+            logger.warning("Failed to load human triage Excel: %s", e)
+            return {}
+
+    def _append_cid_csv(self, base_output: str, finding_stats: Dict[str, Any]) -> None:
+        """Append one row per CID to a timestamped run_cids CSV (incremental, crash-safe)."""
+        csv_path = Path(base_output) / self.lang / f"run_cids_{self._csv_run_tag}.csv"
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        write_header = not csv_path.exists()
+
+        # Read run_summary.json for leads count, LOC aggregation, and verdict
+        # (prefer in-memory findings passed by replay, fall back to disk)
+        leads_count = 0
+        loc_initial = loc_tool = loc_total = 0
+        tool_calls_found = 0
+        llm_verdict = ""
+        run_folder = finding_stats.get("run_folder", "")
+        findings_mem = finding_stats.get("findings")
+        if findings_mem is not None:
+            findings = findings_mem
+            leads_count = len(findings)
+        elif run_folder:
+            summary_file = Path(run_folder) / "run_summary.json"
+            findings = []
+            if summary_file.exists():
+                try:
+                    with open(summary_file, "r", encoding="utf-8") as f:
+                        summary = json.load(f)
+                    findings = summary.get("findings", [])
+                    leads_count = len(findings)
+                    # Verdict: strip newlines/tabs so it stays one CSV row
+                    raw_verdict = summary.get("verdict", "")
+                    llm_verdict = re.sub(r'[\r\n\t]+', ' ', raw_verdict).strip()
+                except (json.JSONDecodeError, OSError):
+                    pass
+        else:
+            findings = []
+
+        # Aggregate LOC and tool_calls_found from findings
+        total_retries = 0
+        lead_failures = 0
+        for fl in findings:
+            fl_loc = fl.get("loc", {})
+            loc_initial += fl_loc.get("initial", 0)
+            loc_tool += fl_loc.get("tool_total", 0)
+            loc_total += fl_loc.get("total", 0)
+            tool_calls_found += sum(
+                1 for te in fl.get("tools_executed", [])
+                if te.get("found")
+            )
+            total_retries += fl.get("retries", 0)
+            if fl.get("status") == "failed" or (not fl.get("answered") and fl.get("confidence") == "none"):
+                lead_failures += 1
+
+        # CID-level status
+        if lead_failures > 0:
+            cid_status = f"lead_failures:{lead_failures}"
+        else:
+            cid_status = "ok"
+
+        row = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "cid": finding_stats.get("cid", ""),
+            "issue_type": finding_stats.get("issue_type", ""),
+            "decision": finding_stats.get("decision", ""),
+            "decision_code": finding_stats.get("decision_code", ""),
+            "llm_verdict": llm_verdict,
+            "run_folder": run_folder,
+            "leads_count": leads_count,
+            "rounds": finding_stats.get("rounds", 0),
+            "tool_calls": finding_stats.get("tool_calls", 0),
+            "tool_calls_found": tool_calls_found,
+            "prompt_tokens": finding_stats.get("prompt_tokens", 0),
+            "completion_tokens": finding_stats.get("completion_tokens", 0),
+            "total_tokens": finding_stats.get("total_tokens", 0),
+            "estimated_cost_usd": finding_stats.get("estimated_cost_usd", 0),
+            "duration_seconds": finding_stats.get("duration_seconds", 0),
+            "llm_seconds": finding_stats.get("llm_seconds", 0),
+            "plan_seconds": finding_stats.get("plan_seconds", 0),
+            "plan_llm_seconds": finding_stats.get("plan_llm_seconds", 0),
+            "investigate_seconds": finding_stats.get("investigate_seconds", 0),
+            "investigate_llm_seconds": finding_stats.get("investigate_llm_seconds", 0),
+            "synthesize_seconds": finding_stats.get("synthesize_seconds", 0),
+            "synthesize_llm_seconds": finding_stats.get("synthesize_llm_seconds", 0),
+            "model": finding_stats.get("model", ""),
+            "loc_initial": loc_initial,
+            "loc_tool": loc_tool,
+            "loc_total": loc_total,
+            "total_retries": total_retries,
+            "lead_failures": lead_failures,
+            "status": cid_status,
+        }
+
+        # Human triage lookup
+        cid_str = str(row["cid"])
+        human = self._human_triage.get(cid_str, {})
+        row["human_report"] = human.get("report", "")
+        row["human_triage_comment"] = human.get("triage_comment", "")
+
+        with open(csv_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=self._CID_CSV_COLUMNS)
+            if write_header:
+                writer.writeheader()
+            writer.writerow(row)
+
+    def _append_leads_csv(self, base_output: str, finding_stats: Dict[str, Any]) -> None:
+        """Append one row per lead to run_leads.csv (incremental, crash-safe)."""
+        # Prefer in-memory findings passed by replay, fall back to run_summary.json
+        findings = finding_stats.get("findings")
+        if findings is None:
+            run_folder = finding_stats.get("run_folder", "")
+            if not run_folder:
+                return
+            summary_file = Path(run_folder) / "run_summary.json"
+            if not summary_file.exists():
+                return
+            try:
+                with open(summary_file, "r", encoding="utf-8") as f:
+                    summary = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                return
+            findings = summary.get("findings", [])
+
+        if not findings:
+            return
+
+        csv_path = Path(base_output) / self.lang / f"run_leads_{self._csv_run_tag}.csv"
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        write_header = not csv_path.exists()
+        cid = finding_stats.get("cid", "")
+        ts = datetime.now(timezone.utc).isoformat()
+
+        with open(csv_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=self._LEAD_CSV_COLUMNS)
+            if write_header:
+                writer.writeheader()
+            for lead in findings:
+                lead_loc = lead.get("loc", {})
+                writer.writerow({
+                    "timestamp": ts,
+                    "cid": cid,
+                    "lead_id": lead.get("id", ""),
+                    "question": lead.get("question", ""),
+                    "answered": lead.get("answered", ""),
+                    "confidence": lead.get("confidence", ""),
+                    "tool_calls": lead.get("tool_calls", 0),
+                    "tool_calls_cached": lead.get("tool_calls_cached", 0),
+                    "tool_calls_found": sum(
+                        1 for te in lead.get("tools_executed", [])
+                        if te.get("found")
+                    ),
+                    "follow_up_rounds": lead.get("follow_up_rounds", 0),
+                    "prompt_tokens": lead.get("prompt_tokens", 0),
+                    "completion_tokens": lead.get("completion_tokens", 0),
+                    "total_tokens": lead.get("total_tokens", 0),
+                    "estimated_cost_usd": lead.get("estimated_cost_usd", 0),
+                    "duration_seconds": lead.get("duration_seconds", 0),
+                    "llm_seconds": lead.get("llm_seconds", 0),
+                    "loc_initial": lead_loc.get("initial", 0),
+                    "loc_tool": lead_loc.get("tool_total", 0),
+                    "loc_total": lead_loc.get("total", 0),
+                    "loc_avg_per_tool": lead_loc.get("avg_per_tool_call", 0),
+                    "retries": lead.get("retries", 0),
+                })
+
+    def _append_tool_calls_csv(self, base_output: str, finding_stats: Dict[str, Any]) -> None:
+        """Append one row per tool call to run_tool_calls.csv (incremental, crash-safe)."""
+        findings = finding_stats.get("findings")
+        if findings is None:
+            run_folder = finding_stats.get("run_folder", "")
+            if not run_folder:
+                return
+            summary_file = Path(run_folder) / "run_summary.json"
+            if not summary_file.exists():
+                return
+            try:
+                with open(summary_file, "r", encoding="utf-8") as f:
+                    summary = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                return
+            findings = summary.get("findings", [])
+
+        if not findings:
+            return
+
+        csv_path = Path(base_output) / self.lang / f"run_tool_calls_{self._csv_run_tag}.csv"
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        write_header = not csv_path.exists()
+        cid = finding_stats.get("cid", "")
+        ts = datetime.now(timezone.utc).isoformat()
+
+        with open(csv_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=self._TOOL_CALLS_CSV_COLUMNS)
+            if write_header:
+                writer.writeheader()
+            for lead in findings:
+                lead_id = lead.get("id", "")
+                for idx, te in enumerate(lead.get("tools_executed", []), start=1):
+                    args_clean = {k: v for k, v in te.get("args", {}).items()
+                                  if k not in ("context", "reason")}
+                    args_str = ", ".join(f"{k}={v}" for k, v in args_clean.items())
+                    first_val = next(iter(args_clean.values()), "") if args_clean else ""
+                    writer.writerow({
+                        "timestamp": ts,
+                        "cid": cid,
+                        "lead_id": lead_id,
+                        "call_index": idx,
+                        "tool": te.get("tool", ""),
+                        "first_arg": first_val,
+                        "args": args_str,
+                        "phase": te.get("phase", ""),
+                        "cached": te.get("cached", False),
+                        "found": te.get("found", ""),
+                        "loc": te.get("loc", 0),
+                        "duration_seconds": te.get("duration_seconds", 0),
+                    })
 
     # ----------------------------------------------------------------------
     # 1. CSV Parsing and Data Gathering
@@ -105,6 +405,39 @@ class IssueAnalyzer:
             raise CodeQLError(f"OS error while reading issues CSV: {file_name}") from e
         return issues
 
+    @staticmethod
+    def _resolve_db_path(dbs_dir: str) -> Optional[str]:
+        """Find the first CodeQL DB under dbs_dir (lightweight — no issues.csv parsing)."""
+        dbs = get_all_dbs(dbs_dir)
+        if dbs:
+            return dbs[0]
+        return None
+
+    def _derive_current_function(
+        self, function_tree_file: str, code: str,
+    ) -> Dict[str, str]:
+        """Best-effort extraction of current_function from code header.
+
+        The code written to 2_initial_code.json starts with:
+            file: <path>
+            <line>: <signature>
+        We parse the file path and first line number, then look up in the
+        function tree.
+        """
+        import re as _re
+        match = _re.match(r"file:\s*(.+)\n(\d+):", code)
+        if not match:
+            return {}
+        file_path_raw = match.group(1).strip()
+        line_no = int(match.group(2))
+        # Normalise for CSV lookup (same logic as process_issue_type)
+        if ":" in file_path_raw:
+            csv_path = file_path_raw.replace("\\", "/")
+        else:
+            csv_path = file_path_raw
+        fn = self.find_function_by_line(function_tree_file, csv_path, line_no)
+        return fn if fn else {}
+
     def collect_issues_from_databases(self, dbs_dir: str) -> Dict[str, List[Dict[str, str]]]:
         """
         Searches through all CodeQL databases in `dbs_folder`, collects issues
@@ -127,7 +460,8 @@ class IssueAnalyzer:
             logger.info("Processing DB: %s", curr_db)
             curr_db_path = Path(curr_db)
             function_tree_csv = curr_db_path / "FunctionTree.csv"
-            issues_file = curr_db_path / "issues.csv"
+            issues_filename = f"issues-{self.batch}.csv" if self.batch else "issues.csv"
+            issues_file = curr_db_path / issues_filename
             if function_tree_csv.exists() and issues_file.exists():
                 # parse_issues_csv() raises CodeQLError on errors
                 issues = self.parse_issues_csv(str(issues_file))
@@ -433,7 +767,7 @@ class IssueAnalyzer:
         return gpt_result
 
 
-    def determine_issue_status(self, llm_content: str) -> str:
+    def determine_issue_status(self, llm_content: str) -> Tuple[str, str]:
         """
         Checks the content returned by the LLM to see if it includes certain
         status codes that classify the issue as 'true' or 'false' or 'more'.
@@ -442,18 +776,23 @@ class IssueAnalyzer:
             llm_content (str): The text content from the LLM's final response.
 
         Returns:
-            str: "true" if content has '1337' or '7337-LEAN-VULN', "false" if content has '1007' or '7337-LEAN-SECURE',
-                 "more" for analysis needed (7331) or conflicting evidence without direction,
-                 otherwise "more".
+            Tuple[str, str]: (status, matched_code) where status is "true"/"false"/"more"
+                and matched_code is the actual code found (e.g. "1337", "7337-LEAN-VULN").
         """
-        if "1337" in llm_content or "7337-LEAN-VULN" in llm_content:
-            return "true"
-        elif "1007" in llm_content or "7337-LEAN-SECURE" in llm_content:
-            return "false"
-        elif "7337" in llm_content or "7331" in llm_content:
-            return "more"  # Conflicting evidence without clear direction or more analysis needed
+        if "7337-LEAN-VULN" in llm_content:
+            return "true", "7337-LEAN-VULN"
+        elif "1337" in llm_content:
+            return "true", "1337"
+        elif "7337-LEAN-SECURE" in llm_content:
+            return "false", "7337-LEAN-SECURE"
+        elif "1007" in llm_content:
+            return "false", "1007"
+        elif "7331" in llm_content:
+            return "more", "7331"
+        elif "7337" in llm_content:
+            return "more", "7337"
         else:
-            return "more"
+            return "more", ""
 
     def append_extra_functions(
         self,
@@ -524,7 +863,8 @@ class IssueAnalyzer:
         Returns 0 if no files exist. The caller should add 1 to get the next ID.
         """
         max_issue_id = 1
-        results_folder = Path("output/results") / self.lang / issue_type.replace(" ", "_").replace("/", "-")
+        base_output = "output/results_orchestrated" if self.orchestrated else "output/results"
+        results_folder = Path(base_output) / self.lang / issue_type.replace(" ", "_").replace("/", "-")
         if not results_folder.exists() or len(list(results_folder.glob("*.json"))) == 0:
             return 1
             
@@ -539,7 +879,9 @@ class IssueAnalyzer:
         issue_type: str,
         issues_of_type: List[Dict[str, str]],
         llm_analyzer: LLMAnalyzer,
-        run_stats: Optional[List[Dict[str, Any]]] = None
+        run_stats: Optional[List[Dict[str, Any]]] = None,
+        finding_offset: int = 0,
+        total_findings: int = 0,
     ) -> None:
         """
         Processes all issues of a single type. Builds file/folder paths, runs
@@ -565,7 +907,8 @@ class IssueAnalyzer:
         """
         if run_stats is None:
             run_stats = []
-        results_folder = Path("output/results") / self.lang / issue_type.replace(" ", "_").replace("/", "-")
+        base_output = "output/results_orchestrated" if self.orchestrated else "output/results"
+        results_folder = Path(base_output) / self.lang / issue_type.replace(" ", "_").replace("/", "-")
         self.ensure_directories_exist([str(results_folder)])
 
         issue_id = self.get_next_issue_id(issue_type)
@@ -576,7 +919,9 @@ class IssueAnalyzer:
 
         logger.info("Found %d issues of type %s", len(issues_of_type), issue_type)
         logger.info("")
-        for issue in issues_of_type:
+        for idx, issue in enumerate(issues_of_type):
+            finding_num = finding_offset + idx + 1
+            progress = "[%d/%d]" % (finding_num, total_findings) if total_findings else ""
             self.db_path = issue["db_path"]
             db_path_obj = Path(self.db_path)
             db_yml_path = db_path_obj / "codeql-database.yml"
@@ -603,7 +948,10 @@ class IssueAnalyzer:
 
             full_file_path = self.code_path + issue["file"]
             logger.info("*" * 80)
-            logger.info("Processing issue ID %d: %s", issue_id, issue["message"])
+            if progress:
+                logger.info("%s CID %s — %s", progress, issue.get('name', issue_id), issue["message"][:100])
+            else:
+                logger.info("Processing issue ID %d: %s", issue_id, issue["message"])
             logger.info("%s, line: %s", issue["file"], issue["start_line"])
 
             logger.debug(f"@@@3Processing issue {issue_id}: file path in CSV='{issue['file']}', resolved full path='{full_file_path}'")
@@ -647,16 +995,30 @@ class IssueAnalyzer:
             logger.debug(f"Final prompt for issue {issue_id}:\n{prompt}")
             logger.debug("*" * 80)
             # Save raw input to the LLM
-            self.save_raw_input_data(prompt, function_tree_file, current_function, results_folder, issue_id, llm_analyzer)
+            if not self.orchestrated:
+                self.save_raw_input_data(prompt, function_tree_file, current_function, results_folder, issue_id, llm_analyzer)
 
             # Send to LLM (with error handling for timeouts and API errors)
             try:
+                extra_kwargs = {}
+                if self.orchestrated:
+                    extra_kwargs["results_folder"] = results_folder
+                    extra_kwargs["code"] = code
+                    if self.plan_file:
+                        extra_kwargs["plan_file"] = self.plan_file
+                    if self.replay_lead:
+                        extra_kwargs["replay_lead"] = self.replay_lead
+                    if self.replay_synthesize:
+                        extra_kwargs["replay_synthesize"] = True
+                    if self.plan_only:
+                        extra_kwargs["plan_only"] = True
                 messages, content, finding_stats = llm_analyzer.run_llm_security_analysis(
                     prompt,
                     function_tree_file,
                     current_function,
                     functions,
-                    self.db_path
+                    self.db_path,
+                    **extra_kwargs,
                 )
             except LLMApiError as e:
                 # Skip this issue on LLM errors (timeout, rate limit, etc.) and continue with others
@@ -666,11 +1028,12 @@ class IssueAnalyzer:
                 continue
 
             gpt_result = self.format_llm_messages(messages)
-            final_file = Path(results_folder) / f"{issue_id}_final.json"
-            write_file_ascii(str(final_file), gpt_result)
+            if not self.orchestrated:
+                final_file = Path(results_folder) / f"{issue_id}_final.json"
+                write_file_ascii(str(final_file), gpt_result)
 
             # Check status code in LLM content
-            status = self.determine_issue_status(content)
+            status, decision_code = self.determine_issue_status(content)
             if status == "true":
                 real_issues.append(issue_id)
                 status = "True Positive"
@@ -682,17 +1045,24 @@ class IssueAnalyzer:
                 status = "LLM needs More Data"
 
             # Log issue status
-            logger.info("Issue ID: %s, LLM decision: → %s", issue_id, status)
-            logger.info("")
-            logger.info("LLM Final Answer:\n%s", content)
-            logger.info("")
+            logger.info("Issue ID: %s, LLM decision: -> %s", issue_id, status)
+            if not self.orchestrated:
+                logger.info("")
+                logger.info("LLM Final Answer:\n%s", content)
+                logger.info("")
 
             # Track per-finding stats for run summary
             finding_stats['cid'] = issue.get('name', str(issue_id))
             finding_stats['issue_type'] = issue_type
             finding_stats['decision'] = status
-            finding_stats['decision_code'] = content[-4:] if content else ''
+            finding_stats['decision_code'] = decision_code
             run_stats.append(finding_stats)
+
+            # Incremental CSV tracking (orchestrated mode)
+            if self.orchestrated:
+                self._append_cid_csv(base_output, finding_stats)
+                self._append_leads_csv(base_output, finding_stats)
+                self._append_tool_calls_csv(base_output, finding_stats)
 
             issue_id += 1
 
@@ -741,25 +1111,185 @@ class IssueAnalyzer:
             from src.utils.prompt_loader import PromptLoader
             prompt_loader = PromptLoader(system_messages_file=self.prompt_file)
             logger.info("Using prompt file: %s", self.prompt_file)
-        llm_analyzer = LLMAnalyzer(prompt_loader=prompt_loader, exact_only=self.exact_only)
-        llm_analyzer.init_llm_client(config=self.config)
 
-        # Gather issues from all DBs
-        issues_statistics = self.collect_issues_from_databases(dbs_dir)
-
-        total_issues = 0
-        for issue_type in issues_statistics:
-            total_issues += len(issues_statistics[issue_type])
-        logger.info("Total issues found: %d", total_issues)
-        logger.info("")
+        if self.orchestrated:
+            from src.llm.orchestrator import Orchestrator
+            llm_analyzer = Orchestrator(prompt_loader=prompt_loader, exact_only=self.exact_only, parallel_leads=self.parallel_leads)
+            llm_analyzer.init_llm_client(config=self.config)
+            logger.info("Engine: orchestrated (Plan -> Investigate -> Synthesize)")
+        else:
+            llm_analyzer = LLMAnalyzer(prompt_loader=prompt_loader, exact_only=self.exact_only)
+            llm_analyzer.init_llm_client(config=self.config)
+            logger.info("Engine: single-conversation (llm_analyzer)")
 
         # Run-level stats accumulator
         run_stats: List[Dict[str, Any]] = []
         run_start_time = time.time()
 
-        # Process all issues, type by type
-        for issue_type in issues_statistics.keys():
-            self.process_issue_type(issue_type, issues_statistics[issue_type], llm_analyzer, run_stats)
+        # Per-run CSV tag: timestamp + _partial for replay runs
+        ts_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
+        is_partial = bool(self.plan_file and (self.replay_lead or self.replay_synthesize))
+        self._csv_run_tag = f"{ts_tag}_partial" if is_partial else ts_tag
+
+        # Load human triage data once for CID CSV enrichment
+        self._human_triage = self._load_human_triage() if self.orchestrated else {}
+
+        # --- Plan-file replay: bypass issues.csv / DB scan entirely ---
+        if self.plan_file and self.orchestrated:
+            plan_path = Path(self.plan_file)
+            run_folder = plan_path.parent
+            plan_cid = run_folder.parent.name  # .../c/{CID}/run_NNN/...
+            results_folder = str(run_folder.parent)  # .../c/{CID}
+
+            # Load stored runtime context (if available)
+            context_file = run_folder / "2_initial_code.json"
+            if context_file.exists():
+                with open(context_file, "r", encoding="utf-8") as f:
+                    stored_ctx = json.load(f)
+            else:
+                stored_ctx = {}
+
+            # Use stored context; fall back to resolving from DB dir for old runs
+            prompt = stored_ctx.get("prompt", "")
+            code = stored_ctx.get("code", "")
+            current_function = stored_ctx.get("current_function", {})
+            functions = stored_ctx.get("functions", [current_function])
+            function_tree_file = stored_ctx.get("function_tree_file", "")
+            db_path = stored_ctx.get("db_path", "")
+
+            # Old 2_initial_code.json files don't have runtime context.
+            # Try to resolve FunctionTree.csv and db_path from dbs_dir.
+            if not function_tree_file or not db_path:
+                resolved_db = self._resolve_db_path(dbs_dir)
+                if resolved_db:
+                    if not db_path:
+                        db_path = resolved_db
+                    if not function_tree_file:
+                        function_tree_file = str(Path(resolved_db) / "FunctionTree.csv")
+                    if not current_function and code:
+                        # Try to derive current_function from the code header
+                        # The code starts with "file: <path>\n<line>: <sig>"
+                        current_function = self._derive_current_function(
+                            function_tree_file, code)
+                    if not functions or functions == [{}]:
+                        functions = [current_function] if current_function else []
+                    logger.info("Plan replay: CID %s from %s (context resolved from DB)",
+                                plan_cid, run_folder)
+                else:
+                    logger.info("Plan replay: CID %s from %s (no stored context, no DB fallback)",
+                                plan_cid, run_folder)
+            else:
+                logger.info("Plan replay: CID %s from %s (stored context, no DB scan)",
+                            plan_cid, run_folder)
+
+            extra_kwargs: Dict[str, Any] = {
+                "results_folder": results_folder,
+                "code": code,
+                "plan_file": self.plan_file,
+            }
+            if self.replay_lead:
+                extra_kwargs["replay_lead"] = self.replay_lead
+            if self.replay_synthesize:
+                extra_kwargs["replay_synthesize"] = True
+            if self.plan_only:
+                extra_kwargs["plan_only"] = True
+
+            try:
+                messages, content, finding_stats = llm_analyzer.run_llm_security_analysis(
+                    prompt, function_tree_file, current_function, functions, db_path,
+                    **extra_kwargs,
+                )
+            except LLMApiError as e:
+                logger.warning("CID %s SKIPPED - LLM error: %s", plan_cid, e)
+                messages, content, finding_stats = [], "", {}
+
+            if content:
+                status, decision_code = self.determine_issue_status(content)
+                if status == "true":
+                    status = "True Positive"
+                elif status == "false":
+                    status = "False Positive"
+                else:
+                    status = "LLM needs More Data"
+                logger.info("CID %s, LLM decision: -> %s", plan_cid, status)
+                finding_stats['cid'] = plan_cid
+                finding_stats['decision'] = status
+                finding_stats['decision_code'] = decision_code
+                run_stats.append(finding_stats)
+
+                # Incremental CSV tracking (replay mode)
+                base_output = "output/results_orchestrated"
+                self._append_cid_csv(base_output, finding_stats)
+                self._append_leads_csv(base_output, finding_stats)
+                self._append_tool_calls_csv(base_output, finding_stats)
+        else:
+            # --- Normal mode: gather issues from all DBs ---
+            issues_statistics = self.collect_issues_from_databases(dbs_dir)
+
+            # --- Last N filter (for error recovery) ---
+            if self.last_n > 0:
+                # Flatten all issues with their types, sort by issue name (CID), take last N
+                all_issues_with_type = []
+                for issue_type, issues in issues_statistics.items():
+                    for issue in issues:
+                        all_issues_with_type.append((issue_type, issue))
+                
+                # Sort by CID (issue name) to ensure consistent ordering
+                all_issues_with_type.sort(key=lambda x: x[1].get("name", ""))
+                
+                # Take only the last N issues
+                last_issues = all_issues_with_type[-self.last_n:] if self.last_n < len(all_issues_with_type) else all_issues_with_type
+                
+                # Rebuild issues_statistics with only the last N
+                issues_statistics = {}
+                for issue_type, issue in last_issues:
+                    if issue_type not in issues_statistics:
+                        issues_statistics[issue_type] = []
+                    issues_statistics[issue_type].append(issue)
+                
+                found_cids = {issue.get("name") for _, issue in last_issues}
+                logger.info("Last %d filter: processing %d issue(s) with CIDs: %s", 
+                           self.last_n, len(last_issues), ", ".join(sorted(found_cids)))
+
+            # --- CID filters ---
+            if self.cid:
+                # Filter to specific CID(s): comma-separated list
+                cid_set = {c.strip() for c in self.cid.split(",") if c.strip()}
+                filtered: Dict[str, List[Dict[str, str]]] = {}
+                for issue_type, issues in issues_statistics.items():
+                    matching = [i for i in issues if i.get("name", "") in cid_set]
+                    if matching:
+                        filtered[issue_type] = matching
+                found_cids = {i.get("name") for v in filtered.values() for i in v}
+                missing = cid_set - found_cids
+                if missing:
+                    logger.warning("CID filter: %s not found in issues.csv", ", ".join(sorted(missing)))
+                issues_statistics = filtered
+                logger.info("CID filter: %d issue(s) matching %s",
+                            sum(len(v) for v in filtered.values()), ", ".join(sorted(cid_set)))
+            elif self.first_cid:
+                # Keep only the first CID encountered (by insertion order)
+                first_type = next(iter(issues_statistics), None)
+                if first_type and issues_statistics[first_type]:
+                    first_issue = issues_statistics[first_type][0]
+                    first_name = first_issue.get("name", "")
+                    issues_statistics = {first_type: [first_issue]}
+                    logger.info("first_cid: processing only CID %s", first_name)
+
+            total_issues = 0
+            for issue_type in issues_statistics:
+                total_issues += len(issues_statistics[issue_type])
+            logger.info("Total issues found: %d", total_issues)
+            logger.info("")
+
+            # Process all issues, type by type
+            finding_offset = 0
+            for issue_type in issues_statistics.keys():
+                self.process_issue_type(
+                    issue_type, issues_statistics[issue_type], llm_analyzer, run_stats,
+                    finding_offset=finding_offset, total_findings=total_issues,
+                )
+                finding_offset += len(issues_statistics[issue_type])
 
         # --- Write run_summary.json ---
         run_duration = time.time() - run_start_time
@@ -824,27 +1354,32 @@ class IssueAnalyzer:
         summary["console_output"] = log_capture_stream.getvalue()
         log_capture_stream.close()
 
-        summary_path = Path("output/results") / self.lang / "run_summary.json"
-        self.ensure_directories_exist([str(summary_path.parent)])
-        summary_json = json.dumps(summary, indent=2, ensure_ascii=False)
-        write_file_ascii(str(summary_path), summary_json)
+        base_output = "output/results_orchestrated" if self.orchestrated else "output/results"
+        if not self.orchestrated:
+            # Orchestrated mode already writes per-run summaries into run_NNN/
+            summary_path = Path(base_output) / self.lang / "run_summary.json"
+            self.ensure_directories_exist([str(summary_path.parent)])
+            summary_json = json.dumps(summary, indent=2, ensure_ascii=False)
+            write_file_ascii(str(summary_path), summary_json)
 
         # Also save run_summary into each CID output folder with matching {id}_summary.json naming
-        for finding in run_stats:
-            cid = finding.get('cid', '')
-            if cid:
-                cid_folder = Path("output/results") / self.lang / str(cid)
-                if cid_folder.exists():
-                    # Find the highest existing ID in this folder to match naming
-                    existing = sorted(cid_folder.glob("*_final.json"))
-                    if existing:
-                        latest_id = existing[-1].stem.replace("_final", "")
-                        per_cid_summary = cid_folder / f"{latest_id}_summary.json"
-                        write_file_ascii(str(per_cid_summary), summary_json)
-                        logger.info("Per-CID summary written to %s", per_cid_summary)
+        if not self.orchestrated:
+            for finding in run_stats:
+                cid = finding.get('cid', '')
+                if cid:
+                    cid_folder = Path(base_output) / self.lang / str(cid)
+                    if cid_folder.exists():
+                        # Find the highest existing ID in this folder to match naming
+                        existing = sorted(cid_folder.glob("*_final.json"))
+                        if existing:
+                            latest_id = existing[-1].stem.replace("_final", "")
+                            per_cid_summary = cid_folder / f"{latest_id}_summary.json"
+                            write_file_ascii(str(per_cid_summary), summary_json)
+                            logger.info("Per-CID summary written to %s", per_cid_summary)
 
         logger.info("=" * 80)
-        logger.info("RUN SUMMARY written to %s", summary_path)
+        if not self.orchestrated:
+            logger.info("RUN SUMMARY written to %s", summary_path)
         logger.info("Findings: %d | TP: %d | FP: %d | More Data: %d", len(run_stats), tp_count, fp_count, md_count)
         logger.info("Total tokens: %d | Estimated cost: $%.4f | Duration: %.1fs", total_all_tokens, total_cost, run_duration)
         logger.info("=" * 80)

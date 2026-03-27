@@ -20,6 +20,7 @@ ENV/
 # Data directories (runtime-generated)
 output/databases/
 output/results/
+output/results_orchestrated/
 output/zip_dbs/
 data/queries/**/*.qlx
 data/queries/**/codeql-pack.lock.yml
@@ -37,6 +38,8 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
+~$*
+*.bak.pptx
 
 # Distribution / packaging
 .Python

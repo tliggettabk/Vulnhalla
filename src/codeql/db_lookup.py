@@ -82,6 +82,156 @@ class CodeQLDBLookup:
             # Fallback for unexpected exception types
             return CodeQLError(f"Error reading {file_type_name}: {file_path_str}")
 
+    def find_method_implementations(
+        self,
+        lookup_csv: str,
+        bare_method: str,
+        namespace_hint: str = "",
+        limit: int = 5,
+    ) -> Tuple[List[str], int]:
+        """
+        Find qualified names of functions whose bare name matches `bare_method`.
+
+        Used to suggest alternative implementations when Class::method is not
+        found (e.g. the method is pure virtual and only concrete subclasses
+        have it).
+
+        Args:
+            lookup_csv: Path to FunctionLookup.csv.
+            bare_method: The unqualified method name (e.g. "Allocate").
+            namespace_hint: Optional namespace prefix to prioritize matches from
+                the same namespace (e.g. "Telescope" from "Telescope::Foo::Allocate").
+            limit: Maximum number of results to return.
+
+        Returns:
+            Tuple of (list of up to `limit` qualified names, total match count).
+            The total count lets callers decide whether suggestions are useful
+            (e.g. suppress when total > 20 and there's no namespace hint).
+        """
+        keys = ["qualified_name", "function_name", "file", "start_line", "end_line"]
+        same_ns: List[str] = []
+        other: List[str] = []
+        try:
+            for line in self._iter_csv_lines(lookup_csv, "FunctionLookup CSV"):
+                if bare_method not in line:
+                    continue
+                row_dict = parse_csv_row(line, keys)
+                if not row_dict:
+                    continue
+                f_name = row_dict["function_name"].replace("\"", "").strip()
+                if f_name == bare_method:
+                    q_name = row_dict["qualified_name"].replace("\"", "").strip()
+                    if namespace_hint and q_name.startswith(namespace_hint + "::"):
+                        same_ns.append(q_name)
+                    else:
+                        other.append(q_name)
+        except Exception:
+            pass  # Best-effort; don't break tool execution
+        total = len(same_ns) + len(other)
+        # Prioritize same-namespace matches, then fill with others
+        return (same_ns + other)[:limit], total
+
+    def lookup_function(
+        self,
+        lookup_csv: str,
+        function_name: str,
+    ) -> Union[str, Dict[str, str]]:
+        """
+        Look up a function by name using FunctionLookup.csv (flat table, no caller gate).
+
+        Matching strategy (first match wins):
+          1. Exact match on qualified_name  (e.g. "PagedVirtualAddressAllocator::SetPageType")
+          2. Exact match on function_name   (bare name, e.g. "SetPageType")
+             — only if there is exactly ONE match (skip ambiguous bare names like "Allocate")
+          3. Suffix match on qualified_name  (e.g. input "Class::Method" matches "Namespace::Class::Method")
+             — only if there is exactly ONE match
+
+        Args:
+            lookup_csv: Path to FunctionLookup.csv.
+            function_name: The name the LLM asked for (e.g. "SetPageType" or
+                          "PagedVirtualAddressAllocator::SetPageType").
+
+        Returns:
+            Dict with keys [qualified_name, function_name, file, start_line, end_line]
+            if found, or an error message string if not found.
+
+        Raises:
+            CodeQLError: If FunctionLookup CSV cannot be read.
+        """
+        keys = ["qualified_name", "function_name", "file", "start_line", "end_line"]
+        search_name = function_name.strip().split("(")[0].strip()  # strip params if present
+        search_bare = search_name.split("::")[-1]  # bare name for pre-filter
+
+        qualified_matches: List[Dict[str, str]] = []
+        bare_matches: List[Dict[str, str]] = []
+        suffix_matches: List[Dict[str, str]] = []
+
+        for line in self._iter_csv_lines(lookup_csv, "FunctionLookup CSV"):
+            # Cheap pre-filter: bare name must appear somewhere in the row
+            if search_bare not in line:
+                continue
+
+            row_dict = parse_csv_row(line, keys)
+            if not row_dict or not row_dict.get("start_line"):
+                continue
+
+            q_name = row_dict["qualified_name"].replace("\"", "").strip()
+            f_name = row_dict["function_name"].replace("\"", "").strip()
+
+            # 1. Exact qualified match
+            if q_name == search_name:
+                qualified_matches.append(row_dict)
+
+            # 2. Exact bare name match
+            if f_name == search_bare:
+                bare_matches.append(row_dict)
+
+            # 3. Suffix match on qualified name (input is a partial qualifier)
+            if ("::" in search_name
+                    and q_name != search_name
+                    and q_name.endswith("::" + search_name.split("::", 1)[-1])
+                    and search_name.split("::")[0] in q_name):
+                suffix_matches.append(row_dict)
+
+        # Return first match from the priority tiers
+        if qualified_matches:
+            if len(qualified_matches) == 1:
+                return qualified_matches[0]
+            # Multiple qualified matches — pick the one in the most relevant file
+            # (shouldn't happen often since qualified names are unique, but be safe)
+            return qualified_matches[0]
+
+        if len(bare_matches) == 1:
+            return bare_matches[0]
+
+        if len(suffix_matches) == 1:
+            return suffix_matches[0]
+
+        # Build informative error message
+        if len(bare_matches) > 1:
+            files = sorted(set(
+                m["file"].replace("\"", "").rsplit("/", 1)[-1]
+                for m in bare_matches[:5]
+            ))
+            return (
+                f"Function '{function_name}' is ambiguous — {len(bare_matches)} functions "
+                f"named '{search_bare}' exist (in {', '.join(files)}). "
+                f"Use the qualified name like 'ClassName::{search_bare}' to disambiguate."
+            )
+
+        if len(suffix_matches) > 1:
+            qualified_names = sorted(set(
+                m["qualified_name"].replace("\"", "") for m in suffix_matches[:5]
+            ))
+            return (
+                f"Function '{function_name}' matched {len(suffix_matches)} functions: "
+                f"{', '.join(qualified_names)}. Use the full qualified name to disambiguate."
+            )
+
+        return (
+            f"Function '{function_name}' not found. Make sure you're using "
+            "the correct tool and args."
+        )
 
     def get_function_by_line(
         self,
@@ -299,26 +449,41 @@ class CodeQLDBLookup:
         if not class_name_only:
             return f"Class '{class_name}' is not a valid class name."
 
-        for row in self._iter_csv_lines(classes_file, "Classes CSV"):
-            if class_name_only in row:
-                row_dict = parse_csv_row(row, keys)
-                if not row_dict:
-                    continue
+        # Search all three CSVs with the current match strictness.
+        # On the first pass (less_strict=False), only exact matches are returned.
+        # If none found, we recurse with less_strict=True to allow substring matching.
+        # This ensures an exact typedef/enum hit is preferred over a substring
+        # class hit (e.g. "StLayerMaskOMPV" finds the typedef, not "StLayerMaskOMPVRaw").
+        csv_sources = [
+            (classes_file, "Classes CSV"),
+        ]
+        enum_file = Path(curr_db) / "EnumLookup.csv"
+        if enum_file.exists():
+            csv_sources.append((enum_file, "EnumLookup CSV"))
+        alias_file = Path(curr_db) / "TypeAliasLookup.csv"
+        if alias_file.exists():
+            csv_sources.append((alias_file, "TypeAliasLookup CSV"))
 
-                actual_class = row_dict["class_name"].replace("\"", "")
-                simple_class = row_dict["simple_name"].replace("\"", "")
-                if (
-                    actual_class == class_name_only
-                    or simple_class == class_name_only
-                    or (less_strict and not exact_only and class_name_only in actual_class)
-                    or (less_strict and not exact_only and class_name_only in simple_class)
-                ):
-                    return row_dict
+        for csv_file, csv_label in csv_sources:
+            for row in self._iter_csv_lines(csv_file, csv_label):
+                if class_name_only in row:
+                    row_dict = parse_csv_row(row, keys)
+                    if not row_dict:
+                        continue
+                    actual_class = row_dict["class_name"].replace('"', '')
+                    simple_class = row_dict["simple_name"].replace('"', '')
+                    if (
+                        actual_class == class_name_only
+                        or simple_class == class_name_only
+                        or (less_strict and not exact_only and class_name_only in actual_class)
+                        or (less_strict and not exact_only and class_name_only in simple_class)
+                    ):
+                        return row_dict
 
         if not less_strict and not exact_only:
             return self.get_class(curr_db, class_name, True, exact_only)
-        else:
-            return f"Class '{class_name}' not found. Could it be a Namespace?"
+
+        return f"Class/enum/typedef '{class_name}' not found. Could it be a Namespace?"
 
 
     def get_caller_function(

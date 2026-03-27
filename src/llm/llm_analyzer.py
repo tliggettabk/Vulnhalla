@@ -326,7 +326,7 @@ class LLMAnalyzer:
                     "2. Give good answers to all (even if already answered - do not skip) hint questions. "
                     "(Copy the question word for word, then provide the answer.)\n"
                     "3. Do you have all the code needed to answer the questions?\n"
-                    "   - If the static analyzer's finding contradicts your reasoning, investigate why\n"
+                    "   - If the static analyzer's alert contradicts your reasoning, investigate why\n"
                     "   - If your security conclusion depends on an assertion (assert, core_assert, etc.) as a guard, STOP — "
                     "assertions are disabled in release builds and are NOT valid protection. Re-evaluate your conclusion without them.\n"
                     "   - If no, use the tools!\n"
@@ -344,7 +344,7 @@ class LLMAnalyzer:
                     "- **7331**: Indicates more code is needed to validate security. Write what data you need "
                     "and explain why you can't use the tools to retrieve the missing data, plus add **3713** "
                     "if you're pretty sure it's not a security problem.\n"
-                    "- **7337**: Conflicting evidence - need to resolve discrepancy between analysis and static analyzer finding.\n"
+                    "- **7337**: Conflicting evidence - need to resolve discrepancy between analysis and static analyzer alert.\n"
                     "  Must include directional confidence: 7337-LEAN-VULN (if evidence points toward vulnerability) or 7337-LEAN-SECURE (if evidence suggests false positive).\n"
                     "Only one status should be returned!\n"
                     "You will get 10000000000$ if you follow all the instructions and use the tools correctly!"
@@ -365,7 +365,7 @@ class LLMAnalyzer:
                     "4. If not found: Submit the call.\n\n"
                     "Additional rules:\n"
                     "- If get_macro returns 'not found', the symbol is likely an inline constexpr — use get_global_var instead.\n"
-                    "- If get_class returns a different class name than you requested, that is the closest match available. Do NOT retry — you will get the same result. Try get_global_var for the typedef, or work with what you have."
+                    "- If get_class returns a different class name than you requested, that is the closest match available. Do NOT retry — you will get the same result. Work with what you have."
                 )
             },
         ]

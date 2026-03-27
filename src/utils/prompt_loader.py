@@ -163,8 +163,7 @@ class PromptLoader:
             "The above is the closest match ('{actual_name}'). "
             "'{requested_name}' may be a typedef or template alias. "
             "Do NOT retry get_class with the same name — the result will be identical. "
-            "Instead, try get_global_var to find the typedef definition, "
-            "or work with the information you already have.]"
+            "Work with the information you already have.]"
         )
         if cc and "fuzzy_class_note" in cc:
             template = "\n\n" + cc["fuzzy_class_note"]
